@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="VoiceInfo.cs" company="Exit Games GmbH">
 //   Photon Voice API Framework for Photon - Copyright (C) 2017 Exit Games GmbH
 // </copyright>
@@ -7,8 +7,11 @@
 // </summary>
 // <author>developer@photonengine.com</author>
 // ----------------------------------------------------------------------------
+
 //#define PHOTON_VOICE_VIDEO_ENABLE
+
 using System.Collections.Generic;
+
 namespace Photon.Voice
 {
 	/// <summary>Describes stream properties.</summary>
@@ -55,6 +58,7 @@ namespace Photon.Voice
 				UserData = userdata
 			};
 		}
+
 #if PHOTON_VOICE_VIDEO_ENABLE
 		/// <summary>
 		/// Helper for VP8 stream info creation.
@@ -75,6 +79,7 @@ namespace Photon.Voice
                 UserData = userdata,
             };
         }
+
         /// <summary>
         /// Helper for VP9 stream info creation.
         /// </summary>
@@ -94,11 +99,13 @@ namespace Photon.Voice
                 UserData = userdata,
             };
         }
+
 #endif
         public override string ToString()
         {
             return "c=" + Codec + " f=" + SamplingRate + " ch=" + Channels + " d=" + FrameDurationUs + " s=" + FrameSize + " b=" + Bitrate + " w=" + Width + " h=" + Height + " ud=" + UserData;
         }
+
         public Codec Codec { get; set; }
         /// <summary>Audio sampling rate (frequency, in Hz).</summary>
         public int SamplingRate { get; set; }
@@ -110,6 +117,7 @@ namespace Photon.Voice
         public int Bitrate { get; set; }
         /// <summary>Optional user data. Should be serializable by Photon.</summary>
         public object UserData { get; set; }
+
         /// <summary>Uncompressed frame (data packet) size in samples.</summary>
         public int FrameDurationSamples { get { return (int)(this.SamplingRate * (long)this.FrameDurationUs / 1000000); } }
         /// <summary>Uncompressed frame (data packet) array size.</summary>
@@ -119,6 +127,7 @@ namespace Photon.Voice
         /// <summary>Video height (optional)</summary>
         public int Height { get; set; }
     }
+
     /// <summary>Information about a remote voice (incoming stream).</summary>
     public class RemoteVoiceInfo
     {

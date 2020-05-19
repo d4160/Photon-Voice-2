@@ -19,7 +19,7 @@ namespace Photon.Voice.Unity.UtilityScripts
     {
         private void Start()
         {
-            Recorder rec = gameObject.GetComponent<Recorder>();
+            Recorder rec = this.gameObject.GetComponent<Recorder>();
             rec.SourceType = Recorder.InputSourceType.Factory;
             rec.InputFactory = () =>
             {
@@ -38,7 +38,7 @@ namespace Photon.Voice.Unity.UtilityScripts
 
         public ToneAudioReader()
         {
-            k = 2 * Math.PI * 440 / SamplingRate;
+            this.k = 2 * Math.PI * 440 / this.SamplingRate;
         }
         public int Channels { get { return 2; } }
 
@@ -58,15 +58,15 @@ namespace Photon.Voice.Unity.UtilityScripts
 
         public bool Read(float[] buf)
         {
-            var bufSamples = buf.Length / Channels;
-            var t = (long)(AudioSettings.dspTime * SamplingRate);
+            var bufSamples = buf.Length / this.Channels;
+            var t = (long)(AudioSettings.dspTime * this.SamplingRate);
 
-            var deltaTimeSamples = t - timeSamples;
-            if (Math.Abs(deltaTimeSamples) > SamplingRate / 4) // when started or Read has not been called for a while
+            var deltaTimeSamples = t - this.timeSamples;
+            if (Math.Abs(deltaTimeSamples) > this.SamplingRate / 4) // when started or Read has not been called for a while
             {
-                Debug.LogWarningFormat("ToneAudioReader sample time is out: {0} / {1}", timeSamples, t);
+                Debug.LogWarningFormat("ToneAudioReader sample time is out: {0} / {1}", this.timeSamples, t);
                 deltaTimeSamples = bufSamples;
-                timeSamples = t - bufSamples;
+                this.timeSamples = t - bufSamples;
             }
 
             if (deltaTimeSamples < bufSamples)
@@ -76,8 +76,8 @@ namespace Photon.Voice.Unity.UtilityScripts
             int x = 0;
             for (int i = 0; i < bufSamples; i++)
             {
-                var v = (float)Math.Sin(timeSamples++ * k) * 0.2f;
-                for (int j = 0; j < Channels; j++)
+                var v = (float)Math.Sin(this.timeSamples++ * this.k) * 0.2f;
+                for (int j = 0; j < this.Channels; j++)
                     buf[x++] = v;
             }
             return true;

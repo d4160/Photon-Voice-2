@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+
 namespace Photon.Voice
 {
 	public class RawCodec
@@ -8,15 +9,20 @@ namespace Photon.Voice
 		public class Encoder<T> : IEncoderDirect<T[]>
 		{
 			public string Error { get; private set; }
+
 			public Action<ArraySegment<byte>> Output { set; get; }
+
 			private static readonly ArraySegment<byte> EmptyBuffer = new ArraySegment<byte>(new byte[] { });
+
 			public ArraySegment<byte> DequeueOutput()
 			{
 				return EmptyBuffer;
 			}
+
 			public void Dispose()
 			{				
 			}			
+
 			public void Input(T[] buf)
 			{
 				if (Error != null)
@@ -42,13 +48,16 @@ namespace Photon.Voice
 				Output(new ArraySegment<byte>(stream.GetBuffer(), 0, (int)stream.Length));
 			}
 		}
+
 		public class Decoder<T> : IDecoder
 		{
 			public string Error { get; private set; }
+
 			public Decoder(Action<T[]> output)
 			{
 				this.output = output;
 			}
+
 			public void Open(VoiceInfo info)
 			{
 			}
@@ -96,6 +105,7 @@ namespace Photon.Voice
 			public void Dispose()
 			{
 			}
+
 			private Action<T[]> output;
 		}
 	}

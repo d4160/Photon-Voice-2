@@ -23,8 +23,8 @@ namespace Photon.Voice.Unity.Editor
 
         private void OnEnable()
         {
-            processor = target as WebRtcAudioDsp;
-            recorder = processor.GetComponent<Recorder>();
+            this.processor = this.target as WebRtcAudioDsp;
+            this.recorder = this.processor.GetComponent<Recorder>();
             this.aecSp = this.serializedObject.FindProperty("aec");
             this.aecMobileSp = this.serializedObject.FindProperty("aecMobile");
             this.aecMobileComfortNoiseSp = this.serializedObject.FindProperty("aecMobileComfortNoise");
@@ -38,23 +38,23 @@ namespace Photon.Voice.Unity.Editor
 
         public override void OnInspectorGUI()
         {
-            serializedObject.UpdateIfRequiredOrScript();
+            this.serializedObject.UpdateIfRequiredOrScript();
 
-            if (!processor.enabled)
+            if (!this.processor.enabled)
             {
                 EditorGUILayout.HelpBox("WebRtcAudioDsp is disabled and will not be used.", MessageType.Warning);
             }
             if (this.recorder != null && this.recorder.SourceType != Recorder.InputSourceType.Microphone)
             {
-                EditorGUILayout.HelpBox("WebRtcAudioDsp should be used with Microphone as Recorder Input Source Type.", MessageType.Warning);
+                EditorGUILayout.HelpBox("WebRtcAudioDsp is better suited to be used with Microphone as Recorder Input Source Type.", MessageType.Warning);
             }
-            VoiceLogger.ExposeLogLevel(this.serializedObject, processor);
+            VoiceLogger.ExposeLogLevel(this.serializedObject, this.processor);
             bool bypassed = false;
             EditorGUI.BeginChangeCheck();
-            if (Application.isPlaying)
+            if (EditorApplication.isPlaying)
             {
-                processor.Bypass = EditorGUILayout.Toggle(new GUIContent("Bypass", "Bypass WebRTC Audio DSP"), processor.Bypass);
-                bypassed = processor.Bypass;
+                this.processor.Bypass = EditorGUILayout.Toggle(new GUIContent("Bypass", "Bypass WebRTC Audio DSP"), this.processor.Bypass);
+                bypassed = this.processor.Bypass;
             }
             else
             {
@@ -64,30 +64,30 @@ namespace Photon.Voice.Unity.Editor
 
             if (!bypassed)
             {
-                if (Application.isPlaying)
+                if (EditorApplication.isPlaying)
                 {
-                    processor.AEC = EditorGUILayout.Toggle(new GUIContent("AEC", "Acoustic Echo Cancellation"), processor.AEC);
-                    processor.AECMobile = EditorGUILayout.Toggle(new GUIContent("AEC Mobile", "Acoustic Echo Cancellation Mobile"), processor.AECMobile);
-                    if (processor.AEC || processor.AECMobile)
+                    this.processor.AEC = EditorGUILayout.Toggle(new GUIContent("AEC", "Acoustic Echo Cancellation"), this.processor.AEC);
+                    this.processor.AECMobile = EditorGUILayout.Toggle(new GUIContent("AEC Mobile", "Acoustic Echo Cancellation Mobile"), this.processor.AECMobile);
+                    if (this.processor.AEC || this.processor.AECMobile)
                     {
-                        if (recorder.MicrophoneType == Recorder.MicType.Photon)
+                        if (this.recorder.MicrophoneType == Recorder.MicType.Photon)
                         {
                             EditorGUILayout.HelpBox("You have enabled AEC here and are using a Photon Mic as input on the Recorder, which might add its own echo cancellation. Please use only one AEC algorithm.", MessageType.Warning);
                         }
-                        processor.ReverseStreamDelayMs = EditorGUILayout.IntField(new GUIContent("ReverseStreamDelayMs", "Reverse stream delay (hint for AEC) in Milliseconds"), processor.ReverseStreamDelayMs);
+                        this.processor.ReverseStreamDelayMs = EditorGUILayout.IntField(new GUIContent("ReverseStreamDelayMs", "Reverse stream delay (hint for AEC) in Milliseconds"), this.processor.ReverseStreamDelayMs);
                     }
-                    if (processor.AECMobile)
+                    if (this.processor.AECMobile)
                     {
-                        processor.AECMobileComfortNoise = EditorGUILayout.Toggle(new GUIContent("AEC Mobile Comfort Noise", "Acoustic Echo Cancellation Mobile Comfort Noise"), processor.AECMobileComfortNoise);
+                        this.processor.AECMobileComfortNoise = EditorGUILayout.Toggle(new GUIContent("AEC Mobile Comfort Noise", "Acoustic Echo Cancellation Mobile Comfort Noise"), this.processor.AECMobileComfortNoise);
                     }
-                    processor.AGC = EditorGUILayout.Toggle(new GUIContent("AGC", "Automatic Gain Control"), processor.AGC);
-                    if (processor.VAD && recorder.VoiceDetection)
+                    this.processor.AGC = EditorGUILayout.Toggle(new GUIContent("AGC", "Automatic Gain Control"), this.processor.AGC);
+                    if (this.processor.VAD && this.recorder.VoiceDetection)
                     {
                         EditorGUILayout.HelpBox("You have enabled VAD here and in the associated Recorder. Please use only one Voice Detection algorithm.", MessageType.Warning);
                     }
-                    processor.VAD = EditorGUILayout.Toggle(new GUIContent("VAD", "Voice Activity Detection"), processor.VAD);
-                    processor.HighPass = EditorGUILayout.Toggle(new GUIContent("HighPass", "High Pass Filter"), processor.HighPass);
-                    processor.NoiseSuppression = EditorGUILayout.Toggle(new GUIContent("NoiseSuppression", "Noise Suppression"), processor.NoiseSuppression);
+                    this.processor.VAD = EditorGUILayout.Toggle(new GUIContent("VAD", "Voice Activity Detection"), this.processor.VAD);
+                    this.processor.HighPass = EditorGUILayout.Toggle(new GUIContent("HighPass", "High Pass Filter"), this.processor.HighPass);
+                    this.processor.NoiseSuppression = EditorGUILayout.Toggle(new GUIContent("NoiseSuppression", "Noise Suppression"), this.processor.NoiseSuppression);
                 }
                 else
                 {
@@ -107,7 +107,7 @@ namespace Photon.Voice.Unity.Editor
                     this.aecMobileSp.boolValue = aecMobile;
                     if (this.aecSp.boolValue || this.aecMobileSp.boolValue)
                     {
-                        if (recorder.MicrophoneType == Recorder.MicType.Photon)
+                        if (this.recorder.MicrophoneType == Recorder.MicType.Photon)
                         {
                             EditorGUILayout.HelpBox("You have enabled AEC here and are using a Photon Mic as input on the Recorder, which might add its own echo cancellation. Please use only one AEC algorithm.", MessageType.Warning);
                         }
@@ -119,7 +119,7 @@ namespace Photon.Voice.Unity.Editor
                         EditorGUILayout.PropertyField(this.aecMobileComfortNoiseSp, new GUIContent("AEC Mobile Comfort Noise", "Acoustic Echo Cancellation Mobile Comfort Noise"));
                     }
                     EditorGUILayout.PropertyField(this.agcSp, new GUIContent("AGC", "Automatic Gain Control"));
-                    if (this.vadSp.boolValue && recorder.VoiceDetection)
+                    if (this.vadSp.boolValue && this.recorder.VoiceDetection)
                     {
                         EditorGUILayout.HelpBox("You have enabled VAD here and in the associated Recorder. Please use only one Voice Detection algorithm.", MessageType.Warning);
                     }
@@ -131,7 +131,7 @@ namespace Photon.Voice.Unity.Editor
                 
             if (EditorGUI.EndChangeCheck())
             {
-                serializedObject.ApplyModifiedProperties();
+                this.serializedObject.ApplyModifiedProperties();
             }
         }
     }

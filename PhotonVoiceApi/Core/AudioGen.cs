@@ -1,10 +1,12 @@
-﻿using System;
+using System;
+
 #if NETFX_CORE
 using Windows.UI.Xaml;
 using TimeObject = System.Object;
 #else
 using TimeObject = System.Timers.ElapsedEventArgs;
 #endif
+
 namespace Photon.Voice
 {
     public static partial class AudioUtil
@@ -26,8 +28,10 @@ namespace Photon.Voice
                 this.channels = channels;
                 k = 2 * Math.PI * frequency / SamplingRate;
             }
+
             /// <summary>Number of channels in the audio signal.</summary>
             public int Channels { get { return channels; } }
+
             /// <summary>Sampling rate of the audio signal (in Hz).</summary>
             public int SamplingRate { get { return samplingRate; } }
             /// <summary>If not null, audio object is in invalid state.</summary>
@@ -45,12 +49,14 @@ namespace Photon.Voice
             {
                 var bufSamples = buf.Length / Channels;
                 var t = (long)(clockSec() * SamplingRate);
+
                 var deltaTimeSamples = t - timeSamples;
                 if (Math.Abs(deltaTimeSamples) > SamplingRate / 4) // when started or Read has not been called for a while
                 {
                     deltaTimeSamples = bufSamples;
                     timeSamples = t - bufSamples;
                 }
+
                 if (deltaTimeSamples < bufSamples)
                 {
                     return false;
@@ -58,6 +64,7 @@ namespace Photon.Voice
                 else
                 {
                     int x = 0;
+
                     if (buf is float[])
                     {
                         for (int i = 0; i < bufSamples; i++)
@@ -82,6 +89,7 @@ namespace Photon.Voice
                 }
             }
         }
+
         /// <summary>IAudioPusher that provides a constant tone signal.</summary>
         // Helpful for debug but does not compile for UWP because of System.Timers.Timer.
         public class ToneAudioPusher<T> : IAudioPusher<T>
@@ -106,6 +114,7 @@ namespace Photon.Voice
 #endif
             Action<T[]> callback;
             ObjectFactory<T[], int> bufferFactory;
+
             /// <summary>Set the callback function used for pushing data</summary>
             /// <param name="callback">Callback function to use</param>
             /// <param name="localVoice">Outgoing audio stream, for context</param>
@@ -115,6 +124,7 @@ namespace Photon.Voice
                 {
                     Dispose();
                 }
+
                 this.callback = callback;
                 this.bufferFactory = bufferFactory;
                 // Hook up the Elapsed event for the timer.
@@ -128,6 +138,7 @@ namespace Photon.Voice
                 timer.Enabled = true;
 #endif
             }
+
             private void OnTimedEvent(object source, TimeObject e)
             {
                 var buf = bufferFactory.New(bufSizeSamples * Channels);
@@ -152,6 +163,7 @@ namespace Photon.Voice
                             b[x++] = v;
                     }
                 }
+
                 cntFrame++;
                 posSamples += bufSizeSamples;
                 this.callback(buf);
@@ -161,9 +173,11 @@ namespace Photon.Voice
             int bufSizeSamples;
             int samplingRate;
             int channels;
+
             public int Channels { get { return channels; } }
             public int SamplingRate { get { return samplingRate; } }
             public string Error { get; private set; }
+
             public void Dispose()
             {
 #if NETFX_CORE

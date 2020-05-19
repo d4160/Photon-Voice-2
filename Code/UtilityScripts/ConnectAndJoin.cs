@@ -35,16 +35,16 @@ namespace Photon.Voice.Unity.UtilityScripts
         private RoomOptions roomOptions = new RoomOptions();
         private TypedLobby typedLobby = TypedLobby.Default;
 
-        public bool IsConnected { get { return voiceConnection.Client.IsConnected; } }
+        public bool IsConnected { get { return this.voiceConnection.Client.IsConnected; } }
 
         private void Awake()
         {
-            voiceConnection = GetComponent<VoiceConnection>();
+            this.voiceConnection = this.GetComponent<VoiceConnection>();
         }
 
         private void OnEnable()
         {
-            voiceConnection.Client.AddCallbackTarget(this);
+            this.voiceConnection.Client.AddCallbackTarget(this);
             if (this.autoConnect)
             {
                 this.ConnectNow();
@@ -53,13 +53,13 @@ namespace Photon.Voice.Unity.UtilityScripts
 
         private void OnDisable()
         {
-            voiceConnection.Client.RemoveCallbackTarget(this);
+            this.voiceConnection.Client.RemoveCallbackTarget(this);
         }
 
         public void ConnectNow()
         {
             Debug.Log("ConnectAndJoin.ConnectNow() will now call: VoiceConnection.ConnectUsingSettings().");
-            voiceConnection.ConnectUsingSettings();
+            this.voiceConnection.ConnectUsingSettings();
         }
 
         #region MatchmakingCallbacks
@@ -81,13 +81,13 @@ namespace Photon.Voice.Unity.UtilityScripts
 
         public void OnJoinedRoom()
         {
-            if (voiceConnection.PrimaryRecorder == null)
+            if (this.voiceConnection.PrimaryRecorder == null)
             {
-                voiceConnection.PrimaryRecorder = this.gameObject.AddComponent<Recorder>();
+                this.voiceConnection.PrimaryRecorder = this.gameObject.AddComponent<Recorder>();
             }
             if (this.autoTransmit)
             {
-                voiceConnection.PrimaryRecorder.TransmitEnabled = autoTransmit;
+                this.voiceConnection.PrimaryRecorder.TransmitEnabled = this.autoTransmit;
             }
         }
 
@@ -95,7 +95,7 @@ namespace Photon.Voice.Unity.UtilityScripts
         {
             if (returnCode == ErrorCode.NoRandomMatchFound)
             {
-                voiceConnection.Client.OpCreateRoom(new EnterRoomParams
+                this.voiceConnection.Client.OpCreateRoom(new EnterRoomParams
                 {
                     RoomName = RoomName,
                     RoomOptions = roomOptions,
@@ -110,7 +110,7 @@ namespace Photon.Voice.Unity.UtilityScripts
 
         public void OnJoinRoomFailed(short returnCode, string message)
         {
-            Debug.LogErrorFormat("OnJoinRoomFailed roomName={0} errorCode={1} errorMessage={2}", RoomName, returnCode, message);
+            Debug.LogErrorFormat("OnJoinRoomFailed roomName={0} errorCode={1} errorMessage={2}", this.RoomName, returnCode, message);
         }
 
         public void OnLeftRoom()
@@ -129,13 +129,13 @@ namespace Photon.Voice.Unity.UtilityScripts
 
         public void OnConnectedToMaster()
         {
-            if (RandomRoom)
+            if (this.RandomRoom)
             {
-                voiceConnection.Client.OpJoinRandomRoom(new OpJoinRandomRoomParams());
+                this.voiceConnection.Client.OpJoinRandomRoom(new OpJoinRandomRoomParams());
             }
             else
             {
-                voiceConnection.Client.OpJoinOrCreateRoom(new EnterRoomParams { RoomName = RoomName, RoomOptions = roomOptions, Lobby = typedLobby });
+                this.voiceConnection.Client.OpJoinOrCreateRoom(new EnterRoomParams { RoomName = RoomName, RoomOptions = roomOptions, Lobby = typedLobby });
             }
         }
 

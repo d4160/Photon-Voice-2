@@ -27,18 +27,18 @@
 
         protected virtual void OnEnable()
         {
-            connection = target as VoiceConnection;
-            updateIntervalSp = serializedObject.FindProperty("updateInterval");
-            enableSupportLoggerSp = serializedObject.FindProperty("enableSupportLogger");
-            settingsSp = serializedObject.FindProperty("Settings");
-            #if !UNITY_ANDROID && !UNITY_IOS
-            runInBackground = serializedObject.FindProperty("runInBackground");
-            #endif
-            #if !UNITY_IOS
-            keepAliveInBackgroundSp = serializedObject.FindProperty("KeepAliveInBackground");
-            #endif
-            applyDontDestroyOnLoadSp = serializedObject.FindProperty("ApplyDontDestroyOnLoad");
-            statsResetInterval = serializedObject.FindProperty("statsResetInterval");
+            this.connection = this.target as VoiceConnection;
+            this.updateIntervalSp = this.serializedObject.FindProperty("updateInterval");
+            this.enableSupportLoggerSp = this.serializedObject.FindProperty("enableSupportLogger");
+            this.settingsSp = this.serializedObject.FindProperty("Settings");
+#if !UNITY_ANDROID && !UNITY_IOS
+            this.runInBackground = this.serializedObject.FindProperty("runInBackground");
+#endif
+#if !UNITY_IOS
+            this.keepAliveInBackgroundSp = this.serializedObject.FindProperty("KeepAliveInBackground");
+#endif
+            this.applyDontDestroyOnLoadSp = this.serializedObject.FindProperty("ApplyDontDestroyOnLoad");
+            this.statsResetInterval = this.serializedObject.FindProperty("statsResetInterval");
             this.primaryRecorderSp = this.serializedObject.FindProperty("primaryRecorder");
             if (this.primaryRecorderSp == null) // [FormerlySerializedAs("PrimaryRecorder")]
             {
@@ -49,35 +49,41 @@
 
         public override void OnInspectorGUI()
         {
-            serializedObject.UpdateIfRequiredOrScript();
+            this.serializedObject.UpdateIfRequiredOrScript();
 
-            VoiceLogger.ExposeLogLevel(serializedObject, connection);
+            VoiceLogger.ExposeLogLevel(this.serializedObject, this.connection);
             EditorGUI.BeginChangeCheck();
-            EditorGUILayout.PropertyField(updateIntervalSp, new GUIContent("Update Interval (ms)", "time [ms] between consecutive SendOutgoingCommands calls"));
-            EditorGUILayout.PropertyField(enableSupportLoggerSp);
-            #if !UNITY_ANDROID && !UNITY_IOS
-            EditorGUILayout.PropertyField(runInBackground, new GUIContent("Run In Background", "Sets Unity's Application.runInBackground: Should the application keep running when the application is in the background?"));
-            #endif
-            #if !UNITY_IOS
-            EditorGUILayout.PropertyField(keepAliveInBackgroundSp, new GUIContent("Background Timeout (ms)", "Defines for how long the Fallback Thread should keep the connection, before it may time out as usual."));
-            #endif
-            EditorGUILayout.PropertyField(applyDontDestroyOnLoadSp, new GUIContent("Don't Destroy On Load", "Persists the GameObject across scenes using Unity's GameObject.DontDestroyOnLoad"));
-            if (Application.isPlaying)
+            EditorGUILayout.PropertyField(this.updateIntervalSp, new GUIContent("Update Interval (ms)", "time [ms] between consecutive SendOutgoingCommands calls"));
+            if (EditorApplication.isPlaying)
             {
-                connection.PrimaryRecorder = EditorGUILayout.ObjectField(
+                this.connection.PrimaryRecorder = EditorGUILayout.ObjectField(
                     new GUIContent("Primary Recorder", "Main Recorder to be used for transmission by default"),
-                    connection.PrimaryRecorder, typeof(Recorder), true) as Recorder;
-                EditorGUILayout.HelpBox("Speaker prefab needs to have a Speaker component in the hierarchy.", MessageType.Info);
-                connection.SpeakerPrefab = EditorGUILayout.ObjectField(new GUIContent("Speaker Prefab",
-                        "Prefab that contains Speaker component to be instantiated when receiving a new remote audio source info"), connection.SpeakerPrefab, 
+                    this.connection.PrimaryRecorder, typeof(Recorder), true) as Recorder;
+                if (this.connection.SpeakerPrefab == null)
+                {
+                    EditorGUILayout.HelpBox("Speaker prefab needs to have a Speaker component in the hierarchy.", MessageType.Info);
+                }
+                this.connection.SpeakerPrefab = EditorGUILayout.ObjectField(new GUIContent("Speaker Prefab",
+                        "Prefab that contains Speaker component to be instantiated when receiving a new remote audio source info"), this.connection.SpeakerPrefab, 
                     typeof(GameObject), false) as GameObject;
             }
             else
             {
+                EditorGUILayout.PropertyField(this.enableSupportLoggerSp, new GUIContent("Support Logger", "Logs additional info for debugging.\nUse this when you submit bugs to the Photon Team."));
+                #if !UNITY_ANDROID && !UNITY_IOS
+                EditorGUILayout.PropertyField(this.runInBackground, new GUIContent("Run In Background", "Sets Unity's Application.runInBackground: Should the application keep running when the application is in the background?"));
+                #endif
+                #if !UNITY_IOS
+                EditorGUILayout.PropertyField(this.keepAliveInBackgroundSp, new GUIContent("Background Timeout (ms)", "Defines for how long the Fallback Thread should keep the connection, before it may time out as usual."));
+                #endif
+                EditorGUILayout.PropertyField(this.applyDontDestroyOnLoadSp, new GUIContent("Don't Destroy On Load", "Persists the GameObject across scenes using Unity's GameObject.DontDestroyOnLoad"));
                 EditorGUILayout.PropertyField(this.primaryRecorderSp,
                     new GUIContent("Primary Recorder", "Main Recorder to be used for transmission by default"));
-                EditorGUILayout.HelpBox("Speaker prefab needs to have a Speaker component in the hierarchy.", MessageType.Info);
                 GameObject prefab = this.speakerPrefabSp.objectReferenceValue as GameObject;
+                if (prefab == null)
+                {
+                    EditorGUILayout.HelpBox("Speaker prefab needs to have a Speaker component in the hierarchy.", MessageType.Info);
+                }
                 prefab = EditorGUILayout.ObjectField(new GUIContent("Speaker Prefab",
                         "Prefab that contains Speaker component to be instantiated when receiving a new remote audio source info"), prefab, 
                     typeof(GameObject), false) as GameObject;
@@ -90,15 +96,18 @@
                     Debug.LogError("SpeakerPrefab must have a component of type Speaker in its hierarchy.", this);
                 }
             }
-            this.DisplayAppSettings();
-            EditorGUILayout.PropertyField(statsResetInterval, new GUIContent("Stats Reset Interval (ms)", "time [ms] between statistics calculations"));
+            if (!this.connection.Client.IsConnected)
+            {
+                this.DisplayAppSettings();
+            }
+            EditorGUILayout.PropertyField(this.statsResetInterval, new GUIContent("Stats Reset Interval (ms)", "time [ms] between statistics calculations"));
 
             if (EditorGUI.EndChangeCheck())
             {
-                serializedObject.ApplyModifiedProperties();
+                this.serializedObject.ApplyModifiedProperties();
             }
 
-            if (PhotonVoiceEditorUtils.IsInTheSceneInPlayMode(connection.gameObject))
+            if (PhotonVoiceEditorUtils.IsInTheSceneInPlayMode(this.connection.gameObject))
             {
                 this.DisplayVoiceStats();
                 this.DisplayDebugInfo(this.connection.Client);
@@ -115,20 +124,20 @@
 
         protected virtual void DisplayVoiceStats()
         {
-            showVoiceStats =
-                EditorGUILayout.Foldout(showVoiceStats, new GUIContent("Voice Frames Stats", "Show frames stats"));
-            if (showVoiceStats)
+            this.showVoiceStats =
+                EditorGUILayout.Foldout(this.showVoiceStats, new GUIContent("Voice Frames Stats", "Show frames stats"));
+            if (this.showVoiceStats)
             {
-                this.DrawLabel("Frames Received /s", connection.FramesReceivedPerSecond.ToString());
-                this.DrawLabel("Frames Lost /s", connection.FramesLostPerSecond.ToString());
-                this.DrawLabel("Frames Lost %", connection.FramesLostPercent.ToString());
+                this.DrawLabel("Frames Received /s", this.connection.FramesReceivedPerSecond.ToString());
+                this.DrawLabel("Frames Lost /s", this.connection.FramesLostPerSecond.ToString());
+                this.DrawLabel("Frames Lost %", this.connection.FramesLostPercent.ToString());
             }
         }
 
         protected virtual void DisplayDebugInfo(LoadBalancingClient client)
         {
-            showDebugInfo = EditorGUILayout.Foldout(showDebugInfo, new GUIContent("Client Debug Info", "Debug info for Photon client"));
-            if (showDebugInfo)
+            this.showDebugInfo = EditorGUILayout.Foldout(this.showDebugInfo, new GUIContent("Client Debug Info", "Debug info for Photon client"));
+            if (this.showDebugInfo)
             {
                 EditorGUI.indentLevel++;
                 this.DrawLabel("Client State", client.State.ToString());
@@ -151,8 +160,8 @@
                 if (client.InRoom)
                 {
                     this.DrawLabel("Room Name", client.CurrentRoom.Name);
-                    showPlayersList = EditorGUILayout.Foldout(showPlayersList, new GUIContent("Players List", "List of players joined to the room"));
-                    if (showPlayersList)
+                    this.showPlayersList = EditorGUILayout.Foldout(this.showPlayersList, new GUIContent("Players List", "List of players joined to the room"));
+                    if (this.showPlayersList)
                     {
                         EditorGUI.indentLevel++;
                         foreach (Player player in client.CurrentRoom.Players.Values)
@@ -194,9 +203,9 @@
 
         protected virtual void DisplayCachedVoiceInfo()
         {
-            showCachedVoices =
-                EditorGUILayout.Foldout(showCachedVoices, new GUIContent("Cached Remote Voices' Info", "Show remote voices info cached by local client"));
-            if (showCachedVoices)
+            this.showCachedVoices =
+                EditorGUILayout.Foldout(this.showCachedVoices, new GUIContent("Cached Remote Voices' Info", "Show remote voices info cached by local client"));
+            if (this.showCachedVoices)
             {
                 List<RemoteVoiceLink> cachedVoices = this.connection.CachedRemoteVoices;
                 Speaker[] speakers = FindObjectsOfType<Speaker>();
@@ -207,6 +216,10 @@
                     this.DrawLabel("Voice #", cachedVoices[i].VoiceId.ToString());
                     this.DrawLabel("Player #", cachedVoices[i].PlayerId.ToString());
                     this.DrawLabel("Channel #", cachedVoices[i].ChannelId.ToString());
+                    if (cachedVoices[i].Info.UserData != null)
+                    {
+                        this.DrawLabel("UserData: ", cachedVoices[i].Info.UserData.ToString());
+                    }
                     bool linked = false;
                     for (int j = 0; j < speakers.Length; j++)
                     {
@@ -232,8 +245,8 @@
         // inspired by PhotonVoiceStatsGui.TrafficStatsWindow
         protected virtual void DisplayTrafficStats(LoadBalancingPeer peer)
         {
-            showTrafficStats = EditorGUILayout.Foldout(showTrafficStats, new GUIContent("Traffic Stats", "Traffic Statistics for Photon Client"));
-            if (showTrafficStats)
+            this.showTrafficStats = EditorGUILayout.Foldout(this.showTrafficStats, new GUIContent("Traffic Stats", "Traffic Statistics for Photon Client"));
+            if (this.showTrafficStats)
             {
                 peer.TrafficStatsEnabled = EditorGUILayout.Toggle(new GUIContent("Enabled", "Enable or disable traffic Statistics for Photon Peer"), peer.TrafficStatsEnabled);
                 if (peer.TrafficStatsEnabled)
@@ -288,12 +301,12 @@
 
         protected virtual void DisplayAppSettings()
         {
-            connection.ShowSettings = EditorGUILayout.Foldout(connection.ShowSettings, new GUIContent("Settings", "Settings to be used by this voice connection"));
-            if (connection.ShowSettings)
+            this.connection.ShowSettings = EditorGUILayout.Foldout(this.connection.ShowSettings, new GUIContent("Settings", "Settings to be used by this voice connection"));
+            if (this.connection.ShowSettings)
             {
                 EditorGUI.indentLevel++;
                 EditorGUILayout.BeginHorizontal();
-                SerializedProperty sP = settingsSp.FindPropertyRelative("AppIdVoice");
+                SerializedProperty sP = this.settingsSp.FindPropertyRelative("AppIdVoice");
                 EditorGUILayout.PropertyField(sP);
                 string appId = sP.stringValue;
                 string url = "https://dashboard.photonengine.com/en-US/PublicCloud";
@@ -306,14 +319,14 @@
                     Application.OpenURL(url);
                 }
                 EditorGUILayout.EndHorizontal();
-                EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("AppVersion"));
-                EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("UseNameServer"));
-                EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("FixedRegion"));
-                EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("Server"));
-                EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("Port"));
-                EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("Protocol"));
-                EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("EnableLobbyStatistics"));
-                EditorGUILayout.PropertyField(settingsSp.FindPropertyRelative("NetworkLogging"));
+                EditorGUILayout.PropertyField(this.settingsSp.FindPropertyRelative("AppVersion"));
+                EditorGUILayout.PropertyField(this.settingsSp.FindPropertyRelative("UseNameServer"), new GUIContent("Use Name Server", "Photon Cloud requires this checked.\nUncheck for Photon Server SDK (OnPremises)."));
+                EditorGUILayout.PropertyField(this.settingsSp.FindPropertyRelative("FixedRegion"), new GUIContent("Fixed Region", "Photon Cloud setting, needs a Name Server.\nDefine one region to always connect to.\nLeave empty to use the best region from a server-side region list."));
+                EditorGUILayout.PropertyField(this.settingsSp.FindPropertyRelative("Server"), new GUIContent("Server", "Typically empty for Photon Cloud.\nFor Photon Server, enter your host name or IP. Also uncheck \"Use Name Server\" for older Photon Server versions."));
+                EditorGUILayout.PropertyField(this.settingsSp.FindPropertyRelative("Port"), new GUIContent("Port", "Use 0 for Photon Cloud.\nOnPremise uses 5055 for UDP and 4530 for TCP."));
+                EditorGUILayout.PropertyField(this.settingsSp.FindPropertyRelative("Protocol"), new GUIContent("Protocol", "Use UDP where possible.\nWSS works on WebGL and Xbox exports.\nDefine WEBSOCKET for use on other platforms."));
+                EditorGUILayout.PropertyField(this.settingsSp.FindPropertyRelative("EnableLobbyStatistics"), new GUIContent("Lobby Statistics", "When using multiple room lists (lobbies), the server can send info about their usage."));
+                EditorGUILayout.PropertyField(this.settingsSp.FindPropertyRelative("NetworkLogging"), new GUIContent("Network Logging", "Log level for the Photon libraries."));
                 EditorGUI.indentLevel--;
             }
         }

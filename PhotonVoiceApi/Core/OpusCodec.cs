@@ -1,6 +1,7 @@
-﻿using POpusCodec.Enums;
+using POpusCodec.Enums;
 using POpusCodec;
 using System;
+
 namespace Photon.Voice
 {
     public class OpusCodec
@@ -14,6 +15,7 @@ namespace Photon.Voice
             Frame40ms = 40000,
             Frame60ms = 60000
         }
+
         public static class Factory
         {
             static public IEncoder CreateEncoder<B>(VoiceInfo i, ILogger logger)
@@ -26,6 +28,7 @@ namespace Photon.Voice
                     throw new UnsupportedCodecException("Factory.CreateEncoder<" + typeof(B) + ">", i.Codec, logger);
             }
         }
+
         public static class DecoderFactory
         {
             public static IEncoder Create<T>(VoiceInfo i, ILogger logger)
@@ -39,6 +42,7 @@ namespace Photon.Voice
                     throw new UnsupportedCodecException("EncoderFactory.Create<" + x[0].GetType() + ">", i.Codec, logger);
             }
         }
+
         abstract public class Encoder<T> : IEncoderDirect<T[]>
         {        
             protected OpusEncoder encoder;
@@ -59,8 +63,11 @@ namespace Photon.Voice
                     logger.LogError("[PV] OpusCodec.Encoder: " + Error);
                 }
             }
+
             public string Error { get; private set; }
+
             public Action<ArraySegment<byte>> Output { set; get; }
+
             public void Input(T[] buf)
             {
                 if (Error != null)
@@ -85,8 +92,11 @@ namespace Photon.Voice
                     }
                 }
             }
+
             private static readonly ArraySegment<byte> EmptyBuffer = new ArraySegment<byte>(new byte[] { });
+
             public ArraySegment<byte> DequeueOutput() { return EmptyBuffer; }
+
             protected abstract ArraySegment<byte> encodeTyped(T[] buf);
             public void Dispose()
             {
@@ -99,10 +109,13 @@ namespace Photon.Voice
                     disposed = true;
                 }
             }
+
         }
+
         public class EncoderFloat : Encoder<float>
         {
             internal EncoderFloat(VoiceInfo i, ILogger logger) : base(i, logger) { }
+
             override protected ArraySegment<byte> encodeTyped(float[] buf)
             {
                 return encoder.Encode(buf);
@@ -116,6 +129,7 @@ namespace Photon.Voice
                 return encoder.Encode(buf);
             }
         }
+
         public abstract class Decoder<T> : IDecoder
         {
             protected OpusDecoder decoder;
@@ -125,6 +139,7 @@ namespace Photon.Voice
                 this.output = output;
                 this.logger = logger;
             }
+
             public void Open(VoiceInfo i)
             {
                 try
@@ -141,8 +156,11 @@ namespace Photon.Voice
                     logger.LogError("[PV] OpusCodec.Decoder: " + Error);
                 }
             }
+
             public string Error { get; private set; }
+
             private Action<T[]> output;
+
             public void Dispose()
             {
                 if (decoder != null)
@@ -150,6 +168,7 @@ namespace Photon.Voice
                     decoder.Dispose();
                 }
             }
+
             public void Input(byte[] buf)
             {
                 if (Error == null)
@@ -161,8 +180,10 @@ namespace Photon.Voice
                     }
                 }
             }
+
             protected abstract T[] decodeTyped(byte[] buf);
         }
+
         public class DecoderFloat : Decoder<float>
         {
             public DecoderFloat(Action<float[]> output, ILogger logger) : base(output, logger) { }
@@ -171,6 +192,7 @@ namespace Photon.Voice
                 return decoder.DecodePacketFloat(buf);
             } 
         }
+
         public class DecoderShort : Decoder<short>
         {
             public DecoderShort(Action<short[]> output,ILogger logger) : base(output, logger) { }
@@ -179,6 +201,7 @@ namespace Photon.Voice
                 return decoder.DecodePacketShort(buf);
             }
         }
+
         public class Util
         {
             internal static int bestEncoderSampleRate(int f)

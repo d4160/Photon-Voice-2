@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+
 namespace Photon.Voice
 {
     /// <summary>Collection of Audio Utility functions and classes.</summary>
@@ -44,6 +45,91 @@ namespace Photon.Voice
                 }
             }
         }
+
+        public static void Resample<T>(T[] src, int srcOffset, int srcCount, T[] dst, int dstOffset, int dstCount, int channels)
+        {
+            if (channels == 1)
+            {
+                for (int i = 0; i < dstCount; i++)
+                {
+                    dst[dstOffset + i] = src[srcOffset + i * srcCount / dstCount];
+                }
+            }
+            else if (channels == 2)
+            {
+                for (int i = 0; i < dstCount / 2; i++)
+                {
+                    var srcI = i * srcCount / dstCount;
+                    var dstCh0I = i * 2;
+                    var srcCh0I = srcI * 2;
+                    dst[dstOffset + dstCh0I++] = src[srcOffset + srcCh0I++];
+                    dst[dstOffset + dstCh0I] = src[srcOffset + srcCh0I];
+                }
+            }
+            else
+            {
+                for (int i = 0; i < dstCount / channels; i++)
+                {
+                    var srcI = i * srcCount / dstCount;
+                    var dstCh0I = i * channels;
+                    var srcCh0I = srcI * channels;
+                    for (int ch = 0; ch < channels; ch++)
+                    {
+                        dst[dstOffset + dstCh0I++] = src[srcOffset + srcCh0I++];
+                    }
+                }
+            }
+        }
+
+        // does not sum channel values but only maps channel to channel (it's not possible to apply math to generic type T)
+        public static void Resample<T>(T[] src, int srcOffset, int srcCount, int srcChannels, T[] dst, int dstOffset, int dstCount, int dstChannels)
+        {
+            if (srcChannels == dstChannels)
+            {
+                Resample<T>(src, srcOffset, srcCount, dst, dstOffset, dstCount, dstChannels);
+                return;
+            }
+
+            if (srcChannels == 1 && dstChannels == 2)
+            {
+                for (int i = 0, j = 0; i < dstCount / 2; i++)
+                {
+                    var v = src[srcOffset + i * srcCount * 2 / dstCount];
+                    dst[dstOffset + j++] = v;
+                    dst[dstOffset + j++] = v;
+                }
+            }
+            else if (srcChannels == 2 && dstChannels == 1)
+            {
+                for (int i = 0; i < dstCount; i++)
+                {
+                    dst[dstOffset + i] = src[srcOffset + i * srcCount / dstCount / 2 * 2];
+                }
+
+            }
+            else
+            {
+                for (int i = 0, j = 0; i < dstCount / dstChannels; i++)
+                {
+                    var srcI = srcOffset + i * srcCount * dstChannels / dstCount / srcChannels * srcChannels;
+                    if (srcChannels >= dstChannels)
+                    {
+                        for (int ch = 0; ch < dstChannels; ch++)
+                        {
+                            dst[dstOffset + j++] = src[srcI + ch];
+                        }
+                    }
+                    else
+                    {
+                        for (int ch = 0; ch < srcChannels; ch++)
+                        {
+                            dst[dstOffset + j++] = src[srcI + ch];
+                        }
+                        j += dstChannels - srcChannels;
+                    }
+                }
+            }
+        }
         /// <summary>Resample audio data so that the complete src buffer fits into dstCount samples in the dst buffer,
         /// and convert short to float samples along the way.</summary>
         /// This implements a primitive nearest-neighbor resampling algorithm for an arbitrary number of channels.
@@ -85,6 +171,7 @@ namespace Photon.Voice
                 }
             }
         }
+
         /// <summary>Resample audio data so that the complete src buffer fits into dstCount samples in the dst buffer,
         /// and convert float to short samples along the way.</summary>
         /// This implements a primitive nearest-neighbor resampling algorithm for an arbitrary number of channels.
@@ -126,6 +213,7 @@ namespace Photon.Voice
                 }
             }
         }
+
         /// <summary>Convert audio buffer from float to short samples.</summary>
         /// <param name="src">Source buffer.</param>
         /// <param name="dst">Destination buffer.</param>
@@ -137,6 +225,7 @@ namespace Photon.Voice
                 dst[i] = (short)(src[i] * (float)short.MaxValue);
             }
         }
+
         /// <summary>Convert audio buffer from short to float samples.</summary>
         /// <param name="src">Source buffer.</param>
         /// <param name="dst">Destination buffer.</param>
@@ -148,6 +237,8 @@ namespace Photon.Voice
                 dst[i] = src[i] / (float)short.MaxValue;
             }
         }
+
+
         /// <summary>Convert audio buffer with arbitrary number of channels to stereo.</summary>
         /// For mono sources (srcChannels==1), the signal will be copied to both Left and Right stereo channels.
         /// For all others, the first two available channels will be used, any other channels will be discarded.
@@ -162,6 +253,7 @@ namespace Photon.Voice
                 dst[j + 1] = srcChannels > 1 ? src[i + 1] : src[i];
             }
         }
+
         internal static string tostr<T>(T[] x, int lim = 10)
         {
             System.Text.StringBuilder b = new System.Text.StringBuilder();
@@ -172,12 +264,14 @@ namespace Photon.Voice
             }
             return b.ToString();
         }
+
         /// <summary>Sample-rate conversion Audio Processor.</summary>
         /// This processor converts the sample-rate of the source stream. Internally, it uses <see cref="AudioUtil.Resample"></see>.
         public class Resampler<T> : IProcessor<T>
         {
             protected T[] frameResampled;
             int channels;
+
             /// <summary>Create a new Resampler instance.</summary>
             /// <param name="dstSize">Frame size of a destination frame. Determins output rate.</param>
             /// <param name="channels">Number of audio channels expected in both in- and output.</param>
@@ -194,7 +288,9 @@ namespace Photon.Voice
             public void Dispose()
             {
             }
+
         }
+
         /// <summary>Audio Level Metering interface.</summary>
         public interface ILevelMeter
         {
@@ -202,6 +298,7 @@ namespace Photon.Voice
             /// Average amplitude value over last half second.
             /// </summary>
             float CurrentAvgAmp { get; }
+
             /// <summary>
             /// Maximum amplitude value over last half second sec.
             /// </summary>
@@ -209,15 +306,18 @@ namespace Photon.Voice
             {
                 get;
             }
+
             /// <summary>
             /// Average of CurrentPeakAmps since last reset.
             /// </summary>
             float AccumAvgPeakAmp { get; }
+
             /// <summary>
             /// Reset <see cref="AccumAvgPeakAmp"></see>.
             /// </summary>
             void ResetAccumAvgPeakAmp();
         }
+
         /// <summary>Dummy Audio Level Meter that doesn't actually do anything.</summary>
         public class LevelMeterDummy : ILevelMeter
         {
@@ -226,6 +326,7 @@ namespace Photon.Voice
             public float AccumAvgPeakAmp { get { return 0; } }
             public void ResetAccumAvgPeakAmp() { }
         }
+
         /// <summary>
         /// Audio Level Meter.
         /// </summary>
@@ -238,33 +339,42 @@ namespace Photon.Voice
             protected int bufferSize;
             protected float[] prevValues;
             protected int prevValuesHead;
+
             protected float accumAvgPeakAmpSum;
             protected int accumAvgPeakAmpCount;
 			protected float currentPeakAmp;
 			protected float norm;
+
 			internal LevelMeter(int samplingRate, int numChannels)
             {
                 this.bufferSize = samplingRate * numChannels / 2; // 1/2 sec
                 this.prevValues = new float[this.bufferSize];
             }
+
             public float CurrentAvgAmp { get { return ampSum / this.bufferSize * norm; } }
             public float CurrentPeakAmp
             {
 				get { return currentPeakAmp * norm; }
 				protected set { currentPeakAmp = value / norm; }
             }
+
             public float AccumAvgPeakAmp { get { return this.accumAvgPeakAmpCount == 0 ? 0 : accumAvgPeakAmpSum / this.accumAvgPeakAmpCount * norm; } }
+
             public void ResetAccumAvgPeakAmp() { this.accumAvgPeakAmpSum = 0; this.accumAvgPeakAmpCount = 0; ampPeak = 0; }
+
             public abstract T[] Process(T[] buf);
+
             public void Dispose()
             {
             }
         }
+
         /// <summary>
         /// LevelMeter specialization for float audio.
         /// </summary>
         public class LevelMeterFloat : LevelMeter<float>
         {
+
             /// <summary>Create new LevelMeterFloat instance.</summary>
             /// <param name="samplingRate">Sampling rate of the audio signal (in Hz).</param>
             /// <param name="numChannels">Number of channels in the audio signal.</param>
@@ -272,6 +382,7 @@ namespace Photon.Voice
 			{
 				norm = 1.0f;
 			}
+
             public override float[] Process(float[] buf)
             {
                 foreach (var v in buf)
@@ -283,6 +394,7 @@ namespace Photon.Voice
                     }
                     ampSum = ampSum + a - this.prevValues[this.prevValuesHead];
                     this.prevValues[this.prevValuesHead] = a;
+
                     if (ampPeak < a)
                     {
                         ampPeak = a;
@@ -299,6 +411,7 @@ namespace Photon.Voice
                 return buf;
             }
         }
+
         /// <summary>
         /// LevelMeter specialization for short audio.
         /// </summary>
@@ -311,6 +424,7 @@ namespace Photon.Voice
 			{
 				norm = 1.0f / short.MaxValue;
 			}
+
             public override short[] Process(short[] buf)
             {
                 foreach (var v in buf)
@@ -322,6 +436,7 @@ namespace Photon.Voice
                     }
                     ampSum = ampSum + a - this.prevValues[this.prevValuesHead];
                     this.prevValues[this.prevValuesHead] = a;
+
                     if (ampPeak < a)
                     {
                         ampPeak = a;
@@ -338,22 +453,29 @@ namespace Photon.Voice
                 return buf;
             }
         }
+
         /// <summary>Voice Activity Detector interface.</summary>
         public interface IVoiceDetector
         {
             /// <summary>If true, voice detection enabled.</summary>
             bool On { get; set; }
+
             /// <summary>Voice detected as soon as signal level exceeds threshold.</summary>
             float Threshold { get; set; }
+
             /// <summary>If true, voice detected.</summary>
             bool Detected { get; }
+
             /// <summary>Last time when switched to detected state.</summary>
             DateTime DetectedTime { get; }
+
             /// <summary>Called when switched to detected state.</summary>
             event Action OnDetected;
+
             /// <summary>Keep detected state during this time after signal level dropped below threshold.</summary>
             int ActivityDelayMs { get; set; }
         }
+
         /// <summary>Calibration Utility for Voice Detector</summary>.
         /// Using this audio processor, you can calibrate the <see cref="IVoiceDetector.Threshold"></see>.
         public class VoiceDetectorCalibration<T> : IProcessor<T>
@@ -364,6 +486,7 @@ namespace Photon.Voice
             public bool IsCalibrating { get { return calibrateCount > 0; } }
             protected int calibrateCount;
             private Action<float> onCalibrated;
+
             /// <summary>Create new VoiceDetectorCalibration instance.</summary>
             /// <param name="voiceDetector">Voice Detector to calibrate.</param>
             /// <param name="levelMeter">Level Meter to look at for calibration.</param>
@@ -375,6 +498,7 @@ namespace Photon.Voice
                 this.voiceDetector = voiceDetector;
                 this.levelMeter = levelMeter;
             }
+
             /// <summary>Start calibration.</summary>
             /// <param name="durationMs">Duration of the calibration procedure (in milliseconds).</param>
             /// This activates the Calibration process. 
@@ -388,6 +512,7 @@ namespace Photon.Voice
             }
             public T[] Process(T[] buf)
             {
+
                 if (this.calibrateCount != 0)
                 {
                     this.calibrateCount -= buf.Length;
@@ -400,10 +525,12 @@ namespace Photon.Voice
                 }
                 return buf;
             }
+
             public void Dispose()
             {
             }
         }
+
         /// <summary>Dummy VoiceDetector that doesn't actually do anything.</summary>
         public class VoiceDetectorDummy : IVoiceDetector
         {
@@ -412,8 +539,11 @@ namespace Photon.Voice
             public bool Detected { get { return false; } }
             public int ActivityDelayMs { get { return 0; } set { } }
             public DateTime DetectedTime { get; private set; }
+
             public event Action OnDetected { add { } remove { } } // Disabling Warning CS0067 The event 'AudioUtil.VoiceDetectorDummy.OnDetected' is never used.
         }
+
+
             /// <summary>
             /// Simple voice activity detector triggered by signal level.
             /// </summary>
@@ -421,11 +551,14 @@ namespace Photon.Voice
         {
             /// <summary>If true, voice detection enabled.</summary>
             public bool On { get; set; }
+
             /// <summary>Voice detected as soon as signal level exceeds threshold.</summary>
             public float Threshold { get { return threshold * norm; } set { threshold = value / norm; } }
+
 			protected float norm;
 			protected float threshold;
 			bool detected;
+
 			/// <summary>If true, voice detected.</summary>
 			public bool Detected
             {
@@ -439,8 +572,10 @@ namespace Photon.Voice
                     }
                 }
             }
+
             /// <summary>Last time when switched to detected state.</summary>
             public DateTime DetectedTime { get; private set; }
+
             /// <summary>Keep detected state during this time after signal level dropped below threshold.</summary>
             public int ActivityDelayMs
             {
@@ -451,23 +586,29 @@ namespace Photon.Voice
                     this.activityDelayValuesCount = value * valuesCountPerSec / 1000;
                 }
             }
+
             /// <summary>Called when switched to detected state.</summary>
             public event Action OnDetected;
+
             protected int activityDelay;
             protected int autoSilenceCounter = 0;
             protected int valuesCountPerSec;
             protected int activityDelayValuesCount;
+
             internal VoiceDetector(int samplingRate, int numChannels)
             {
                 this.valuesCountPerSec = samplingRate * numChannels;
                 this.ActivityDelayMs = 500;
                 this.On = true;
             }
+
             public abstract T[] Process(T[] buf);
+
             public void Dispose()
             {
             }
         }
+
         /// <summary>VoiceDetector specialization for float audio.</summary>
         public class VoiceDetectorFloat : VoiceDetector<float>
         {
@@ -478,6 +619,7 @@ namespace Photon.Voice
             {
                 norm = 1f;
             }
+
             public override float[] Process(float[] buffer)
             {
                 if (this.On)
@@ -506,6 +648,7 @@ namespace Photon.Voice
                 }
             }
         }
+
         /// <summary>VoiceDetector specialization for float audio.</summary>
         public class VoiceDetectorShort : VoiceDetector<short>
         {
@@ -516,6 +659,7 @@ namespace Photon.Voice
             {
                 norm = 1.0f / short.MaxValue;
             }
+
             public override short[] Process(short[] buffer)
             {
                 if (this.On)
@@ -544,16 +688,20 @@ namespace Photon.Voice
                 }
             }
         }
+
         /// <summary>Utility Audio Processor Voice Detection Calibration.</summary>
         /// Encapsulates level meter, voice detector and voice detector calibrator in single instance.
         public class VoiceLevelDetectCalibrate<T> : IProcessor<T>
         {
             /// <summary>The LevelMeter in use.</summary>
             public ILevelMeter LevelMeter { get; private set; }
+
             /// <summary>The VoiceDetector in use</summary>
             public IVoiceDetector VoiceDetector { get; private set; }
+
             /// <summary>The VoiceDetectorCalibration in use.</summary>
             VoiceDetectorCalibration<T> calibration;
+
             /// <summary>Create new VoiceLevelDetectCalibrate instance</summary>
             /// <param name="samplingRate">Sampling rate of the audio signal (in Hz).</param>
             /// <param name="numChannels">Number of channels in the audio signal.</param>
@@ -576,6 +724,7 @@ namespace Photon.Voice
                 }
                 calibration = new VoiceDetectorCalibration<T>(VoiceDetector, LevelMeter, samplingRate, channels);
             }
+
             /// <summary>Start calibration</summary>
             /// <param name="durationMs">Duration of the calibration procedure (in milliseconds).</param>
             /// <param name="onCalibrated">Called when calibration is complete. Parameter is new threshold value.</param>
@@ -586,6 +735,7 @@ namespace Photon.Voice
             {
                 calibration.Calibrate(durationMs, onCalibrated);
             }
+
             public bool IsCalibrating { get { return calibration.IsCalibrating; } }
             
             public T[] Process(T[] buf)
@@ -595,6 +745,7 @@ namespace Photon.Voice
                 buf = (VoiceDetector as IProcessor<T>).Process(buf);
                 return buf;
             }
+
             public void Dispose()
             {
                 (LevelMeter as IProcessor<T>).Dispose();
@@ -603,6 +754,7 @@ namespace Photon.Voice
             }
         }
    }
+
     public interface IAudioOut<T>
     {
         bool IsPlaying { get; }
@@ -612,10 +764,11 @@ namespace Photon.Voice
         void Service();
         int Lag { get; }
     }
+
     public interface ISyncAudioOut<T> : IAudioOut<T>
     {
         int PlaySamplePos { get; set; }
         void Pause();
-        void UnPause();        
+        void UnPause();
     }
 }

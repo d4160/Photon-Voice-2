@@ -20,8 +20,8 @@
             this.PlayerId = playerId;
             this.VoiceId = voiceId;
             this.ChannelId = channelId;
-            options.SetOutput(OnDecodedFrameFloatAction);
-            options.OnRemoteVoiceRemoveAction = OnRemoteVoiceRemoveAction;
+            options.SetOutput(this.OnDecodedFrameFloatAction);
+            options.OnRemoteVoiceRemoveAction = this.OnRemoteVoiceRemoveAction;
         }
 
         private void OnRemoteVoiceRemoveAction()

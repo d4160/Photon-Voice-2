@@ -25,7 +25,7 @@ namespace Photon.Voice.Unity.UtilityScripts
                 this.simpleAmplifier.BoostValue);
             if (EditorGUI.EndChangeCheck())
             {
-                serializedObject.ApplyModifiedProperties();
+                this.serializedObject.ApplyModifiedProperties();
             }
         }
     }

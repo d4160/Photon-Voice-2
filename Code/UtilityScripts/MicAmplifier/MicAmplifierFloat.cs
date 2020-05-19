@@ -23,7 +23,7 @@
 
         public float[] Process(float[] buf)
         {
-            if (Disabled)
+            if (this.Disabled)
             {
                 return buf;
             }

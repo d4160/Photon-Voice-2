@@ -1,4 +1,5 @@
 using System;
+
 namespace Photon.Voice
 {
     /// <summary>Audio Source interface.</summary>
@@ -6,11 +7,14 @@ namespace Photon.Voice
     {
         /// <summary>Sampling rate of the audio signal (in Hz).</summary>
         int SamplingRate { get; }
+
         /// <summary>Number of channels in the audio signal.</summary>
         int Channels { get; }
+
         /// <summary>If not null, audio object is in invalid state.</summary>
         string Error { get; }
     }
+
     // Trivial implementation. Used to build erroneous source.
     public class AudioDesc : IAudioDesc
     {
@@ -31,6 +35,7 @@ namespace Photon.Voice
 	public interface IAudioReader<T> : IDataReader<T>, IAudioDesc
     {
     }
+
     /// <summary>Audio Pusher interface.</summary>
     /// Opposed to an IAudioReader (which will deliver audio data when it is "pulled"),
     /// an IAudioPusher will push its audio data whenever it is ready,
@@ -41,6 +46,7 @@ namespace Photon.Voice
         /// <param name="localVoice">Outgoing audio stream, for context.</param>
         void SetCallback(Action<T[]> callback, ObjectFactory<T[], int> bufferFactory);
 	}
+
     /// <summary>Interface for an outgoing audio stream.</summary>
     /// A LocalVoice always brings a LevelMeter and a VoiceDetector, which you can access using this interface.
     public interface ILocalVoiceAudio
@@ -48,10 +54,13 @@ namespace Photon.Voice
         /// <summary>The VoiceDetector in use.</summary>
         /// Use it to enable or disable voice detector and set its parameters.
         AudioUtil.IVoiceDetector VoiceDetector { get; }
+
         /// <summary>The LevelMeter utility in use.</summary>
         AudioUtil.ILevelMeter LevelMeter { get; }
+
         /// <summary>If true, voice detector calibration is in progress.</summary>
         bool VoiceDetectorCalibrating { get; }
+
         /// <summary>
         /// Trigger voice detector calibration process.
         /// </summary>
@@ -60,6 +69,7 @@ namespace Photon.Voice
         /// <param name="onCalibrated">Called when calibration is complete. Parameter is new threshold value.</param>
         void VoiceDetectorCalibrate(int durationMs, Action<float> onCalibrated = null);
     }
+
     /// <summary>Outgoing audio stream.</summary>
     abstract public class LocalVoiceAudio<T> : LocalVoiceFramed<T>, ILocalVoiceAudio
     {
@@ -84,6 +94,7 @@ namespace Photon.Voice
                 throw new UnsupportedSampleTypeException(typeof(T));
             }
         }
+
         override public IEncoder CreateDefaultEncoder(VoiceInfo info)
         {
             switch (info.Codec)
@@ -94,11 +105,13 @@ namespace Photon.Voice
                     throw new UnsupportedCodecException("LocalVoiceAudio.CreateDefaultEncoder<" + (new T[1])[0].GetType() + ">", info.Codec, Logger);
             }
         }
+
     	public virtual AudioUtil.IVoiceDetector VoiceDetector { get { return voiceDetector; } }
         protected AudioUtil.VoiceDetector<T> voiceDetector;
         protected AudioUtil.VoiceDetectorCalibration<T> voiceDetectorCalibration;
         public virtual AudioUtil.ILevelMeter LevelMeter { get { return levelMeter; } }
         protected AudioUtil.LevelMeter<T> levelMeter;
+
         /// <summary>Trigger voice detector calibration process.</summary>
         /// While calibrating, keep silence. Voice detector sets threshold basing on measured backgroud noise level.
         /// <param name="durationMs">Duration of calibration in milliseconds.</param>
@@ -107,10 +120,13 @@ namespace Photon.Voice
         {
             voiceDetectorCalibration.Calibrate(durationMs, onCalibrated);
         }
+
         /// <summary>True if the VoiceDetector is currently calibrating.</summary>
         public bool VoiceDetectorCalibrating { get { return voiceDetectorCalibration.IsCalibrating; } }
+
         protected int channels;
         protected bool resampleSource;
+
         internal LocalVoiceAudio(VoiceClient voiceClient, IEncoder encoder, byte id, VoiceInfo voiceInfo, IAudioDesc audioSourceDesc, int channelId)
             : base(voiceClient, encoder, id, voiceInfo, channelId,
                   voiceInfo.SamplingRate != 0 ? voiceInfo.FrameSize * audioSourceDesc.SamplingRate / voiceInfo.SamplingRate : voiceInfo.FrameSize
@@ -133,15 +149,18 @@ namespace Photon.Voice
             AddPostProcessor(levelMeter, voiceDetectorCalibration, voiceDetector); // level meter and calibration should be processed even if no signal detected
         }
     }
+
     /// <summary>Dummy LocalVoiceAudio</summary>
     /// For testing, this LocalVoiceAudio implementation features a <see cref="AudioUtil.VoiceDetectorDummy"></see> and a <see cref="AudioUtil.LevelMeterDummy"></see>
     public class LocalVoiceAudioDummy : LocalVoice, ILocalVoiceAudio
     {
         private AudioUtil.VoiceDetectorDummy voiceDetector;
         private AudioUtil.LevelMeterDummy levelMeter;
+
         public AudioUtil.IVoiceDetector VoiceDetector { get { return voiceDetector; } }
         public AudioUtil.ILevelMeter LevelMeter { get { return levelMeter; } }
         public bool VoiceDetectorCalibrating { get { return false; } }
+
         public void VoiceDetectorCalibrate(int durationMs, Action<float> onCalibrated = null) { }
         public LocalVoiceAudioDummy()
         {
@@ -151,6 +170,7 @@ namespace Photon.Voice
         /// <summary>A Dummy LocalVoiceAudio instance.</summary>
         public static LocalVoiceAudioDummy Dummy = new LocalVoiceAudioDummy();
     }
+
     /// <summary>Specialization of <see cref="LocalVoiceAudio"></see> for float audio</summary>
     public class LocalVoiceAudioFloat : LocalVoiceAudio<float>
     {
@@ -163,6 +183,7 @@ namespace Photon.Voice
             initBuiltinProcessors();
         }
     }
+
     /// <summary>Specialization of <see cref="LocalVoiceAudio"></see> for short audio</summary>
     public class LocalVoiceAudioShort : LocalVoiceAudio<short>
     {

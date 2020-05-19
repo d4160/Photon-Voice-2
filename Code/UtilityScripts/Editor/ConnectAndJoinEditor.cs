@@ -14,33 +14,33 @@
 
         private void OnEnable()
         {
-            connectAndJoin = target as ConnectAndJoin;
-            randomRoomSp = serializedObject.FindProperty("RandomRoom");
-            roomNameSp = serializedObject.FindProperty("RoomName");
-            autoConnectSp = serializedObject.FindProperty("autoConnect");
-            autoTransmitSp = serializedObject.FindProperty("autoTransmit");
+            this.connectAndJoin = this.target as ConnectAndJoin;
+            this.randomRoomSp = this.serializedObject.FindProperty("RandomRoom");
+            this.roomNameSp = this.serializedObject.FindProperty("RoomName");
+            this.autoConnectSp = this.serializedObject.FindProperty("autoConnect");
+            this.autoTransmitSp = this.serializedObject.FindProperty("autoTransmit");
         }
 
         public override void OnInspectorGUI()
         {
             EditorGUI.BeginChangeCheck();
-            EditorGUILayout.PropertyField(autoConnectSp);
-            EditorGUILayout.PropertyField(autoTransmitSp);
-            EditorGUILayout.PropertyField(randomRoomSp);
-            if (!randomRoomSp.boolValue)
+            EditorGUILayout.PropertyField(this.autoConnectSp);
+            EditorGUILayout.PropertyField(this.autoTransmitSp);
+            EditorGUILayout.PropertyField(this.randomRoomSp);
+            if (!this.randomRoomSp.boolValue)
             {
-                EditorGUILayout.PropertyField(roomNameSp);
+                EditorGUILayout.PropertyField(this.roomNameSp);
             }
-            if (Application.isPlaying && !connectAndJoin.IsConnected)
+            if (Application.isPlaying && !this.connectAndJoin.IsConnected)
             {
                 if (GUILayout.Button("Connect"))
                 {
-                    connectAndJoin.ConnectNow();
+                    this.connectAndJoin.ConnectNow();
                 }
             }
             if (EditorGUI.EndChangeCheck())
             {
-                serializedObject.ApplyModifiedProperties();
+                this.serializedObject.ApplyModifiedProperties();
             }
         }
     }

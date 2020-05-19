@@ -10,6 +10,7 @@
         private Speaker speaker;
 
         private SerializedProperty playDelayMsSp;
+        private SerializedProperty playbackOnlyWhenEnabledSp;
 
         #region AnimationCurve
 
@@ -20,22 +21,23 @@
 
         private void DrawAnimationCurve()
         {
-            audioSource.GetSpectrumData(samples, 0, window);
-            curve = new AnimationCurve();
-            for (var i = 0; i < samples.Length; i++)
+            this.audioSource.GetSpectrumData(this.samples, 0, this.window);
+            this.curve = new AnimationCurve();
+            for (var i = 0; i < this.samples.Length; i++)
             {
-                curve.AddKey(1.0f / samples.Length * i, samples[i] * 100);
+                this.curve.AddKey(1.0f / this.samples.Length * i, this.samples[i] * 100);
             }
-            EditorGUILayout.CurveField(curve, Color.green, new Rect(0, 0, 1.0f, 0.1f), GUILayout.Height(64));
+            EditorGUILayout.CurveField(this.curve, Color.green, new Rect(0, 0, 1.0f, 0.1f), GUILayout.Height(64));
         }
 
         #endregion
 
         private void OnEnable()
         {
-            speaker = target as Speaker;
-            audioSource = speaker.GetComponent<AudioSource>();
-            playDelayMsSp = serializedObject.FindProperty("PlayDelayMs");
+            this.speaker = this.target as Speaker;
+            this.audioSource = this.speaker.GetComponent<AudioSource>();
+            this.playDelayMsSp = this.serializedObject.FindProperty("PlayDelayMs");
+            this.playbackOnlyWhenEnabledSp = this.serializedObject.FindProperty("playbackOnlyWhenEnabled");
         }
 
         public override bool RequiresConstantRepaint()
@@ -45,22 +47,31 @@
 
         public override void OnInspectorGUI()
         {
-            serializedObject.UpdateIfRequiredOrScript();
-            VoiceLogger.ExposeLogLevel(serializedObject, speaker);
+            this.serializedObject.UpdateIfRequiredOrScript();
+            VoiceLogger.ExposeLogLevel(this.serializedObject, this.speaker);
 
             EditorGUI.BeginChangeCheck();
 
-            EditorGUILayout.PropertyField(playDelayMsSp, new GUIContent("Playback Delay (ms)", "Remote audio stream playback delay to compensate packets latency variations. Try 100 - 200 if sound is choppy. Default is 200ms"));
+            EditorGUILayout.PropertyField(this.playDelayMsSp, new GUIContent("Playback Delay (ms)", "Remote audio stream playback delay to compensate packets latency variations. Try 100 - 200 if sound is choppy. Default is 200ms"));
+            if (EditorApplication.isPlaying)
+            {
+                this.speaker.PlaybackOnlyWhenEnabled = EditorGUILayout.Toggle(new GUIContent("Playback Only When Enabled", "If true, component will work only when enabled and active in hierarchy."),
+                    this.speaker.PlaybackOnlyWhenEnabled);
+            }
+            else
+            {
+                EditorGUILayout.PropertyField(this.playbackOnlyWhenEnabledSp, new GUIContent("Playback Only When Enabled", "If true, component will work only when enabled and active in hierarchy."));
+            }
 
             if (EditorGUI.EndChangeCheck())
             {
-                serializedObject.ApplyModifiedProperties();
+                this.serializedObject.ApplyModifiedProperties();
             }
 
-            if (speaker.IsPlaying)
+            if (this.speaker.IsPlaying)
             {
-                EditorGUILayout.LabelField(string.Format("Current Buffer Lag: {0}", speaker.Lag));
-                DrawAnimationCurve();
+                EditorGUILayout.LabelField(string.Format("Current Buffer Lag: {0}", this.speaker.Lag));
+                this.DrawAnimationCurve();
             }
         }
     }

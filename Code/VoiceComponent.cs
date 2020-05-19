@@ -23,13 +23,13 @@ namespace Photon.Voice.Unity
         {
             get
             {
-                if (logger == null)
+                if (this.logger == null)
                 {
-                    logger = new VoiceLogger(this, string.Format("{0}.{1}", name, this.GetType().Name), logLevel);
+                    this.logger = new VoiceLogger(this, string.Format("{0}.{1}", this.name, this.GetType().Name), this.logLevel);
                 }
-                return logger;
+                return this.logger;
             }
-            protected set { logger = value; }
+            protected set { this.logger = value; }
         }
 
         [SerializeField]
@@ -40,26 +40,26 @@ namespace Photon.Voice.Unity
             {
                 if (this.Logger != null)
                 {
-                    logLevel = this.Logger.LogLevel;
+                    this.logLevel = this.Logger.LogLevel;
                 }
-                return logLevel;
+                return this.logLevel;
             }
             set
             {
-                logLevel = value;
+                this.logLevel = value;
                 if (this.Logger == null)
                 {
                     return;
                 }
-                this.Logger.LogLevel = logLevel;
+                this.Logger.LogLevel = this.logLevel;
             }
         }
 
         protected virtual void Awake()
         {
-            if (logger == null)
+            if (this.logger == null)
             {
-                logger = new VoiceLogger(this, string.Format("{0}.{1}", name, this.GetType().Name), logLevel);
+                this.logger = new VoiceLogger(this, string.Format("{0}.{1}", this.name, this.GetType().Name), this.logLevel);
             }
         }
     }

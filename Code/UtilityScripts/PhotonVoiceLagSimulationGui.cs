@@ -48,7 +48,7 @@ namespace Photon.Voice.Unity.UtilityScripts
             }
             this.voiceConnection = voiceConnections[0];
             this.peer = this.voiceConnection.Client.LoadBalancingPeer;
-            debugLostPercent = this.voiceConnection.VoiceClient.DebugLostPercent;
+            this.debugLostPercent = this.voiceConnection.VoiceClient.DebugLostPercent;
         }
 
         private void OnGUI()
@@ -107,11 +107,11 @@ namespace Photon.Voice.Unity.UtilityScripts
             this.peer.NetworkSimulationSettings.IncomingLossPercentage = (int)loss;
             this.peer.NetworkSimulationSettings.OutgoingLossPercentage = (int)loss;
 
-            GUILayout.Label(string.Format("Lost Audio Frames {0}%", (int)debugLostPercent));
-            debugLostPercent = GUILayout.HorizontalSlider(debugLostPercent, 0, 100);
+            GUILayout.Label(string.Format("Lost Audio Frames {0}%", (int)this.debugLostPercent));
+            this.debugLostPercent = GUILayout.HorizontalSlider(this.debugLostPercent, 0, 100);
             if (newSimEnabled)
             {
-                this.voiceConnection.VoiceClient.DebugLostPercent = (int)debugLostPercent;
+                this.voiceConnection.VoiceClient.DebugLostPercent = (int)this.debugLostPercent;
             }
             else
             {

@@ -1,9 +1,11 @@
-﻿#if (UNITY_IOS && !UNITY_EDITOR) || __IOS__
+#if (UNITY_IOS && !UNITY_EDITOR) || __IOS__
 #define DLL_IMPORT_INTERNAL
 #endif
+
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+
 namespace Photon.Voice
 {
     public class WebRTCAudioProcessor : WebRTCAudioLib, IProcessor<short>
@@ -17,6 +19,7 @@ namespace Photon.Voice
         bool ns;
         bool agc;
         bool vad;
+
         public int AECStreamDelayMs { set { if (reverseStreamDelayMs != value) { reverseStreamDelayMs = value; if (proc != IntPtr.Zero) setParam(Param.REVERSE_STREAM_DELAY_MS, value); } } }
         public bool AEC
         {
@@ -31,6 +34,7 @@ namespace Photon.Voice
                 }
             }
         }        
+
         public bool AECMobile
         {
             set
@@ -44,13 +48,16 @@ namespace Photon.Voice
                 }
             }
         }
+
         public int AECMRoutingMode { set { if (aecmRoutingMode != value) { aecmRoutingMode = value; if (proc != IntPtr.Zero) setParam(Param.AECM_ROUTING_MODE, value); } } }
         public bool AECMComfortNoise { set { if (aecmComfortNoise != value) { aecmComfortNoise = value; if (proc != IntPtr.Zero) setParam(Param.AECM_COMFORT_NOISE, value ? 1 : 0); } } }
+
         public bool HighPass { set { if (highPass != value) { highPass = value; if (proc != IntPtr.Zero) setParam(Param.HIGH_PASS_FILTER, value ? 1 : 0); } } }
         public bool NoiseSuppression { set { if (ns != value) { ns = value; if (proc != IntPtr.Zero) setParam(Param.NS, value ? 1 : 0); } } }
         public bool AGC { set { if (agc != value) { agc = value; if (proc != IntPtr.Zero) setParam(Param.AGC, value ? 1 : 0); } } }
         public bool VAD { set { if (vad != value) { vad = value; if (proc != IntPtr.Zero) setParam(Param.VAD, value ? 1 : 0); } } }
         public bool Bypass { set; private get; }
+
         int inFrameSize; // frames passed to Process
         int processFrameSize; // frames passed to webrtc_audio_processor_process
         int samplingRate; // input sampling rate (the same for Process and webrtc_audio_processor_process)
@@ -63,9 +70,11 @@ namespace Photon.Voice
         int reverseSamplingRate;
         int reverseChannels;
         ILogger logger;
+
         // audio parameters supported by webrtc
         const int supportedFrameLenMs = 10;
         int[] supportedSamplingRates = {  8000, 16000, 32000, 48000 };
+
         public WebRTCAudioProcessor(ILogger logger, int frameSize, int samplingRate, int channels, int reverseSamplingRate, int reverseChannels)
         {
             bool ok = false;
@@ -83,6 +92,7 @@ namespace Photon.Voice
                 disposed = true;
                 return;
             }            
+
             this.logger = logger;
             this.inFrameSize = frameSize;
             this.processFrameSize = samplingRate * supportedFrameLenMs / 1000;
@@ -106,6 +116,7 @@ namespace Photon.Voice
             }
             logger.LogInfo("WebRTCAudioProcessor create sampling rate {0}, frame samples {1}", samplingRate, this.inFrameSize / this.channels);
         }
+
         bool aecInited;
         private void InitReverseStream()
         {
@@ -117,9 +128,11 @@ namespace Photon.Voice
                     {
                         return;
                     }
+
                     int size = processFrameSize * reverseSamplingRate / samplingRate * reverseChannels;
                     reverseFramer = new Framer<float>(size);
                     reverseBuf = new short[processFrameSize * reverseChannels / channels]; // should match direct stream
+
                     if (reverseSamplingRate != samplingRate)
                     {
                         logger.LogWarning("WebRTCAudioProcessor AEC: output sampling rate {0} != {1} capture sampling rate. For better AEC, set audio source (microphone) and audio output samping rates to the same value.", reverseSamplingRate, samplingRate);
@@ -128,11 +141,13 @@ namespace Photon.Voice
                 }
             }
         }
+
         public short[] Process(short[] buf)
         {
             if (Bypass) return buf;
             if (disposed) return buf;
             if (proc == IntPtr.Zero) return buf;
+
             if (buf.Length != this.inFrameSize)
             {
                 this.logger.LogError("WebRTCAudioProcessor Process: frame size expected: {0}, passed: {1}", this.inFrameSize, buf);
@@ -187,14 +202,18 @@ namespace Photon.Voice
                 }
             }
         }
+
         private int setParam(int param, int v)
         {
             return webrtc_audio_processor_set_param(proc, param, v);
         }
+
         private int setConfigParam(int param, int v)
         {
             return webrtc_audio_processor_set_config_param(proc, param, v);
         }
+
+
         public void Dispose()
         {
             lock (this)
@@ -210,6 +229,7 @@ namespace Photon.Voice
             }
         }
     }
+
     public class WebRTCAudioLib
     {
 #if DLL_IMPORT_INTERNAL
@@ -232,6 +252,7 @@ namespace Photon.Voice
         public static extern int webrtc_audio_processor_process_reverse(IntPtr proc, short[] buffer, int bufferSize);
         [DllImport(lib_name, CallingConvention = CallingConvention.Cdecl, CharSet = CharSet.Ansi)]
         public static extern void webrtc_audio_processor_destroy(IntPtr proc);
+
         // library methods return webrtc error codes
         enum Error
         {
@@ -249,11 +270,13 @@ namespace Photon.Voice
             kFileError = -10,
             kStreamParameterNotSetError = -11,
             kNotEnabledError = -12,
+
             // Warnings are non-fatal.
             // This results when a set_stream_ parameter is out of range. Processing
             // will continue, but the parameter may have been truncated.
             kBadStreamParameterWarning = -13
         };
+
         enum AECMobileRoutingMode
         {
             kQuietEarpieceOrHeadset,
@@ -266,28 +289,37 @@ namespace Photon.Voice
         {
             public const int AEC_DELAY_AGNOSTIC = 12;
             public const int AEC_EXTENDED_FILTER = 13;
+
             public const int AGC_EXPERIMENTAL = 53;
             public const int AGC_EXPERIMENTAL_STARTUP_MIN_VOLUME = 54;
             public const int AGC_EXPERIMENTAL_CLIP_LEVEL_MIN = 55;
         };
+
         public struct Param
         {
             public const int REVERSE_STREAM_DELAY_MS = 1;
+
             public const int AEC = 10;
             public const int AEC_SUPPRESSION_LEVEL = 11;
+
             public const int AECM = 20;
             public const int AECM_ROUTING_MODE = 21;
             public const int AECM_COMFORT_NOISE = 22;
+
             public const int HIGH_PASS_FILTER = 31;
+
             public const int NS = 41;
             public const int NS_LEVEL = 42;
+
             public const int AGC = 51;
             public const int AGC_MODE = 52;
             public const int AGC_COMPRESSION_GAIN = 56;
             public const int AGC_LIMITER = 57;
+
             public const int VAD = 61;
             public const int VAD_FRAME_SIZE_MS = 62;
             public const int VAD_LIKELIHOOD = 63;
         }
+
     }
 }

@@ -3,10 +3,9 @@
 // 2. Pushes audio data via callback as soon as data is available. Minimal latency and ability to use "push" Photon Voice interface which is more efficient.
 // Push mode enabled if CallbackData.pushCallback property set.
 
+#import <AudioToolbox/AudioToolbox.h>
+#import <AVFoundation/AVFoundation.h>
 #import "AudioIn.h"
-
-// Framework includes
-#import <AVFoundation/AVAudioSession.h>
 
 #define SAMPLE_RATE 48000
 
@@ -20,7 +19,7 @@ reason:[NSString stringWithFormat:@"%s (%i)", operation, (int)error] userInfo:nu
 } while (0)
 
 const int BUFFER_SIZE = 4096000;
-NSMutableSet* handles = [[NSMutableSet alloc] init];
+static NSMutableSet* handles = [[NSMutableSet alloc] init];
 
 struct CallbackData {
     AudioUnit rioUnit;
@@ -105,7 +104,10 @@ Photon_Audio_In* Photon_Audio_In_CreatePusher(int hostID, Photon_IOSAudio_PushCa
 
 void Photon_Audio_In_Destroy(Photon_Audio_In* handle) {
     [handle stopIOUnit];
-    [handles removeObject:handle];
+    // remove reference to the handle in the same queue as used for push callback to make sure that all pending buffers processed before handle destroyed
+    dispatch_async(dispatch_get_main_queue(), ^{
+        [handles removeObject:handle];
+    });
 }
 
 // Render callback function

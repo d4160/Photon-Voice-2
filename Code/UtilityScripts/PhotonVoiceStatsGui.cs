@@ -30,7 +30,7 @@ namespace Photon.Voice.Unity.UtilityScripts
         private bool statsWindowOn = true;
 
         /// <summary>Option to turn collecting stats on or off (used in Update()).</summary>
-        private bool statsOn = true;
+        private bool statsOn;
 
         /// <summary>Shows additional "health" values of connection.</summary>
         private bool healthStatsVisible;
@@ -41,6 +41,8 @@ namespace Photon.Voice.Unity.UtilityScripts
         /// <summary>Show buttons to control stats and reset them.</summary>
         private bool buttonsOn;
 
+        private bool voiceStatsOn = true;
+
         /// <summary>Positioning rect for window.</summary>
         private Rect statsRect = new Rect(0, 100, 300, 50);
 
@@ -48,7 +50,11 @@ namespace Photon.Voice.Unity.UtilityScripts
         private int windowId = 200;
 
         /// <summary>The peer currently in use (to set the network simulation).</summary>
-        private PhotonPeer peer; 
+        private PhotonPeer peer;
+
+        private VoiceConnection voiceConnection;
+
+        private VoiceClient voiceClient;
 
         private void OnEnable()
         {
@@ -63,7 +69,9 @@ namespace Photon.Voice.Unity.UtilityScripts
             {
                 Debug.LogWarningFormat(this, "Multiple VoiceConnection components found, using first occurrence attached to GameObject {0}", voiceConnections[0].name);
             }
-            this.peer = voiceConnections[0].Client.LoadBalancingPeer;
+            this.voiceConnection = voiceConnections[0];
+            this.voiceClient = this.voiceConnection.VoiceClient;
+            this.peer = this.voiceConnection.Client.LoadBalancingPeer;
             if (this.statsRect.x <= 0)
             {
                 this.statsRect.x = Screen.width - this.statsRect.width;
@@ -82,7 +90,7 @@ namespace Photon.Voice.Unity.UtilityScripts
 
         private void OnGUI()
         {
-            if (this.peer.TrafficStatsEnabled != statsOn)
+            if (this.peer.TrafficStatsEnabled != this.statsOn)
             {
                 this.peer.TrafficStatsEnabled = this.statsOn;
             }
@@ -109,6 +117,7 @@ namespace Photon.Voice.Unity.UtilityScripts
             this.buttonsOn = GUILayout.Toggle(this.buttonsOn, "buttons");
             this.healthStatsVisible = GUILayout.Toggle(this.healthStatsVisible, "health");
             this.trafficStatsOn = GUILayout.Toggle(this.trafficStatsOn, "traffic");
+            this.voiceStatsOn = GUILayout.Toggle(this.voiceStatsOn, "voice stats");
             GUILayout.EndHorizontal();
 
             string total = string.Format("Out {0,4} | In {1,4} | Sum {2,4}", gls.TotalOutgoingMessageCount, gls.TotalIncomingMessageCount, gls.TotalMessageCount);
@@ -147,7 +156,7 @@ namespace Photon.Voice.Unity.UtilityScripts
             {
                 GUILayout.Box("Voice Client Health Stats");
                 healthStats = string.Format(
-                    "ping: {6}[+/-{7}]ms resent:{8} \n\nmax ms between\nsend: {0,4} \ndispatch: {1,4} \n\nlongest dispatch for: \nev({3}):{2,3}ms \nop({5}):{4,3}ms",
+                    "ping: {6}|{9}[+/-{7}|{10}]ms resent:{8} \n\nmax ms between\nsend: {0,4} \ndispatch: {1,4} \n\nlongest dispatch for: \nev({3}):{2,3}ms \nop({5}):{4,3}ms",
                     gls.LongestDeltaBetweenSending,
                     gls.LongestDeltaBetweenDispatching,
                     gls.LongestEventCallback,
@@ -156,8 +165,25 @@ namespace Photon.Voice.Unity.UtilityScripts
                     gls.LongestOpResponseCallbackOpCode,
                     this.peer.RoundTripTime,
                     this.peer.RoundTripTimeVariance,
-                    this.peer.ResentReliableCommands);
+                    this.peer.ResentReliableCommands,
+                    this.voiceClient.RoundTripTime,
+                    this.voiceClient.RoundTripTimeVariance);
                 GUILayout.Label(healthStats);
+            }
+
+            string voiceStats = string.Empty;
+            if (this.voiceStatsOn)
+            {
+                GUILayout.Box("Voice Frames Stats");
+                voiceStats = string.Format("received: {0}, {1:F2}/s \n\nlost: {2}, {3:F2}/s ({4:F2}%) \n\nsent: {5} ({6} bytes)",
+                    this.voiceClient.FramesReceived,
+                    this.voiceConnection.FramesReceivedPerSecond,
+                    this.voiceClient.FramesLost,
+                    this.voiceConnection.FramesLostPerSecond,
+                    this.voiceConnection.FramesLostPercent,
+                    this.voiceClient.FramesSent,
+                    this.voiceClient.FramesSentBytes);
+                GUILayout.Label(voiceStats);
             }
 
             if (statsToLog)

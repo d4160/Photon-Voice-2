@@ -57,49 +57,49 @@ namespace Photon.Voice.Unity
         public void LogError(string fmt, params object[] args)
         {
             if (!this.IsErrorEnabled) return;
-            fmt = string.Format("[{0}] {1}", Tag, fmt);
-            if (context == null)
+            fmt = string.Format("[{0}] {1}", this.Tag, fmt);
+            if (this.context == null)
             {
                 Debug.LogErrorFormat(fmt, args);
             }
             else
             {
-                Debug.LogErrorFormat(context, fmt, args);
+                Debug.LogErrorFormat(this.context, fmt, args);
             }
         }
 
         public void LogWarning(string fmt, params object[] args)
         {
             if (!this.IsWarningEnabled) return;
-            fmt = string.Format("[{0}] {1}", Tag, fmt);
-            if (context == null)
+            fmt = string.Format("[{0}] {1}", this.Tag, fmt);
+            if (this.context == null)
             {
                 Debug.LogWarningFormat(fmt, args);
             }
             else
             {
-                Debug.LogWarningFormat(context, fmt, args);
+                Debug.LogWarningFormat(this.context, fmt, args);
             }
         }
 
         public void LogInfo(string fmt, params object[] args)
         {
             if (!this.IsInfoEnabled) return;
-            fmt = string.Format("[{0}] {1}", Tag, fmt);
-            if (context == null)
+            fmt = string.Format("[{0}] {1}", this.Tag, fmt);
+            if (this.context == null)
             {
                 Debug.LogFormat(fmt, args);
             }
             else
             {
-                Debug.LogFormat(context, fmt, args);
+                Debug.LogFormat(this.context, fmt, args);
             }
         }
 
         public void LogDebug(string fmt, params object[] args)
         {
             if (!this.IsDebugEnabled) return;
-            LogInfo(fmt, args);
+            this.LogInfo(fmt, args);
         }
 
         #endregion

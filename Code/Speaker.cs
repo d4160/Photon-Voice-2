@@ -7,9 +7,10 @@
 // </summary>
 // <author>developer@photonengine.com</author>
 // ----------------------------------------------------------------------------
-
+//#define USE_ONAUDIOFILTERREAD
 
 using System;
+using System.Collections;
 using UnityEngine;
 
 
@@ -26,9 +27,19 @@ namespace Photon.Voice.Unity
 
         private RemoteVoiceLink remoteVoiceLink;
 
-        private bool started;
-
         private bool initialized; // awake called
+
+        [SerializeField]
+        private bool playbackOnlyWhenEnabled;
+
+        private bool useSeparateCoroutine = true;
+
+        private Coroutine playbackCoroutine;
+
+        #if USE_ONAUDIOFILTERREAD
+        private AudioSyncBuffer<float> outBuffer;
+        private int outputSampleRate;
+        #endif
 
         #endregion
 
@@ -89,6 +100,43 @@ namespace Photon.Voice.Unity
         }
         #endif
 
+        /// <summary> If true, component will work only when enabled and active in hierarchy.  </summary>
+        public bool PlaybackOnlyWhenEnabled
+        {
+            get { return this.playbackOnlyWhenEnabled; }
+            set
+            {
+                if (this.playbackOnlyWhenEnabled != value)
+                {
+                    this.playbackOnlyWhenEnabled = value;
+                    if (this.IsLinked)
+                    {
+                        if (this.playbackOnlyWhenEnabled)
+                        {
+                            if (this.isActiveAndEnabled != this.PlaybackStarted)
+                            {
+                                if (this.isActiveAndEnabled)
+                                {
+                                    this.StartPlayback();
+                                }
+                                else
+                                {
+                                    this.StopPlayback();
+                                }
+                            }
+                        }
+                        else if (!this.PlaybackStarted)
+                        {
+                            this.StartPlaying();
+                        }
+                    }
+                }
+            }
+        }
+
+        /// <summary> Returns if the playback is on. </summary>
+        public bool PlaybackStarted { get; private set; }
+
         #endregion
 
         #region Private Methods
@@ -96,8 +144,13 @@ namespace Photon.Voice.Unity
         protected override void Awake()
         {
             base.Awake();
-            Func<IAudioOut<float>> factory = () => new AudioStreamPlayer<float>(new VoiceLogger(this, "AudioStreamPlayer", this.LogLevel),  
-                new UnityAudioOut(this.GetComponent<AudioSource>()), "PhotonVoiceSpeaker:", this.Logger.IsInfoEnabled);
+            #if USE_ONAUDIOFILTERREAD
+            this.outBuffer = new AudioSyncBuffer<float>(this.Logger, string.Empty, this.Logger.IsInfoEnabled);
+            this.outputSampleRate = AudioSettings.outputSampleRate;
+            Func<IAudioOut<float>> factory = () => this.outBuffer;
+            #else
+            Func<IAudioOut<float>> factory = () => new UnityAudioOut(this.GetComponent<AudioSource>(), this.Logger, string.Empty, this.Logger.IsInfoEnabled);
+            #endif
 
             #if !UNITY_EDITOR && UNITY_PS4
             this.audioOutput = new Photon.Voice.PS4.PS4AudioOut(PS4UserID, factory);
@@ -105,9 +158,25 @@ namespace Photon.Voice.Unity
             this.audioOutput = factory();
             #endif
             this.initialized = true;
-            if (this.IsLinked)
+            if (!this.PlaybackOnlyWhenEnabled && this.IsLinked)
             {
                 this.StartPlaying();
+            }
+        }
+
+        private void OnEnable()
+        {
+            if (this.IsLinked && !this.PlaybackStarted)
+            {
+                this.StartPlaying();
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (this.PlaybackOnlyWhenEnabled && this.PlaybackStarted)
+            {
+                this.StopPlaying();
             }
         }
 
@@ -163,11 +232,6 @@ namespace Photon.Voice.Unity
         {
             this.audioOutput.Push(frame);
         }
-
-        private void Update()
-        {
-            this.audioOutput.Service();
-        }
         
         private bool StartPlaying()
         {
@@ -179,7 +243,7 @@ namespace Photon.Voice.Unity
                 }
                 return false;
             }
-            if (this.started)
+            if (this.PlaybackStarted)
             {
                 if (this.Logger.IsWarningEnabled)
                 {
@@ -218,7 +282,11 @@ namespace Photon.Voice.Unity
             } 
             this.audioOutput.Start(voiceInfo.SamplingRate, voiceInfo.Channels, voiceInfo.FrameDurationSamples, this.PlayDelayMs);
             this.remoteVoiceLink.FloatFrameDecoded += this.OnAudioFrame;
-            this.started = true;
+            this.PlaybackStarted = true;
+            if (this.useSeparateCoroutine)
+            {
+                this.playbackCoroutine = this.StartCoroutine(this.PlaybackCoroutine());
+            }
             return true;
         }
 
@@ -228,7 +296,7 @@ namespace Photon.Voice.Unity
             {
                 this.Logger.LogDebug("OnDestroy");
             }
-            if (this.started)
+            if (this.PlaybackStarted)
             {
                 this.StopPlaying();
             }
@@ -241,7 +309,7 @@ namespace Photon.Voice.Unity
             {
                 this.Logger.LogDebug("StopPlaying");
             }
-            if (!this.started)
+            if (!this.PlaybackStarted)
             {
                 if (this.Logger.IsWarningEnabled)
                 {
@@ -265,7 +333,12 @@ namespace Photon.Voice.Unity
             {
                 this.Logger.LogWarning("audioOutput is null while stopping playback");
             }
-            this.started = false;
+            if (this.useSeparateCoroutine || this.playbackCoroutine != null)
+            {
+                this.StopCoroutine(this.playbackCoroutine);
+                this.playbackCoroutine = null;
+            }
+            this.PlaybackStarted = false;
             return true;
         }
 
@@ -281,6 +354,62 @@ namespace Photon.Voice.Unity
                 this.remoteVoiceLink = null;
             }
             this.Actor = null;
+        }
+
+        private IEnumerator PlaybackCoroutine()
+        {
+            while (this.PlaybackStarted && this.useSeparateCoroutine)
+            {
+                this.audioOutput.Service();
+                yield return null;
+            }
+        }
+
+        private IEnumerator Start()
+        {
+            while (!this.useSeparateCoroutine)
+            {
+                this.audioOutput.Service();
+                yield return null;
+            }
+        }
+
+        #if USE_ONAUDIOFILTERREAD
+        private void OnAudioFilterRead(float[] data, int channels)
+        {
+            this.outBuffer.Read(data, channels, this.outputSampleRate);
+        }
+        #endif
+
+        #endregion
+
+        #region Public Methods
+
+        /// <summary>
+        /// Starts the audio playback of the linked incoming remote audio stream via AudioSource component.
+        /// </summary>
+        /// <returns>True if playback is successfully started.</returns>
+        public bool StartPlayback()
+        {
+            return this.StartPlaying();
+        }
+
+        /// <summary>
+        /// Stops the audio playback of the linked incoming remote audio stream via AudioSource component.
+        /// </summary>
+        /// <returns>True if playback is successfully stopped.</returns>
+        public bool StopPlayback()
+        {
+            return this.StopPlaying();
+        }
+
+        /// <summary>
+        /// Restarts the audio playback of the linked incoming remote audio stream via AudioSource component.
+        /// </summary>
+        /// <returns>True if playback is successfully restarted.</returns>
+        public bool RestartPlayback()
+        {
+            return this.StopPlayback() && this.StartPlayback();
         }
 
         #endregion

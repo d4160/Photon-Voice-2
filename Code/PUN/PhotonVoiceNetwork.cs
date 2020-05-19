@@ -197,7 +197,7 @@ namespace Photon.Voice.PUN
 
         private void OnEnable()
         {
-            PhotonNetwork.NetworkingClient.StateChanged += OnPunStateChanged;
+            PhotonNetwork.NetworkingClient.StateChanged += this.OnPunStateChanged;
             this.FollowPun(); // in case this is enabled or activated late
             this.clientCalledConnectAndJoin = false;
             this.clientCalledDisconnect = false;
@@ -207,7 +207,7 @@ namespace Photon.Voice.PUN
         protected override void OnDisable()
         {
             base.OnDisable();
-            PhotonNetwork.NetworkingClient.StateChanged -= OnPunStateChanged;
+            PhotonNetwork.NetworkingClient.StateChanged -= this.OnPunStateChanged;
         }
 
         protected override void OnDestroy()
@@ -434,9 +434,9 @@ namespace Photon.Voice.PUN
         {
             if (this.Client.InRoom && photonVoiceView != null && viewId > 0)
             {
-                for (int i = 0; i < cachedRemoteVoices.Count; i++)
+                for (int i = 0; i < this.cachedRemoteVoices.Count; i++)
                 {
-                    RemoteVoiceLink remoteVoice = cachedRemoteVoices[i];
+                    RemoteVoiceLink remoteVoice = this.cachedRemoteVoices[i];
                     if (remoteVoice.Info.UserData is int)
                     {
                         int photonViewId = (int)remoteVoice.Info.UserData;
@@ -447,7 +447,7 @@ namespace Photon.Voice.PUN
                             {
                                 this.Logger.LogInfo("Speaker 'late-linking' for the PhotonView with ID {0} with remote voice {1}/{2}.", viewId, remoteVoice.PlayerId, remoteVoice.VoiceId);
                             }
-                            LinkSpeaker(speaker, remoteVoice);
+                            this.LinkSpeaker(speaker, remoteVoice);
                             break;
                         }
                     } 

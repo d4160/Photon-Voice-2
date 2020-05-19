@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+
 namespace Photon.Voice
 {
     /// <summary>
@@ -14,7 +15,9 @@ namespace Photon.Voice
         void Free(TType obj);
         void Free(TType obj, TInfo info);
     }
+
     // Object factory implementation skipped, we use only arrays for now
+
     /// <summary>
     /// Array factory returnig the same array instance as long as it requested with the same array length. If length changes, new array instance created.
     /// </summary>
@@ -26,11 +29,14 @@ namespace Photon.Voice
         {
             this.arr = new T[size];
         }
+
         public int Info { get { return arr.Length; } }
+
         public T[] New()
         {
             return arr;
         }
+
         public T[] New(int size)
         {
             if (arr.Length != size)
@@ -39,16 +45,20 @@ namespace Photon.Voice
             }
             return arr;
         }
+
         public void Free(T[] obj)
         {
         }
+
         public void Free(T[] obj, int info)
         {
         }
+
         public void Dispose()
         {
         }
     }
+
     /// <summary>
     /// <see cref="PrimitiveArrayPool{T}"/> as wrapped in object factory interface.
     /// </summary>
@@ -60,27 +70,34 @@ namespace Photon.Voice
         {
             pool = new PrimitiveArrayPool<T>(capacity, name);
         }
+
         public FactoryPrimitiveArrayPool(int capacity, string name, int info)
         {
             pool = new PrimitiveArrayPool<T>(capacity, name, info);
         }
+
         public int Info { get { return pool.Info; } }
+
         public T[] New()
         {
             return pool.AcquireOrCreate();
         }
+
         public T[] New(int size)
         {
             return pool.AcquireOrCreate(size);
         }
+
         public void Free(T[] obj)
         {
             pool.Release(obj);
         }
+
         public void Free(T[] obj, int info)
         {
             pool.Release(obj, info);
         }
+
         public void Dispose()
         {
             pool.Dispose();

@@ -23,7 +23,7 @@
 
         public short[] Process(short[] buf)
         {
-            if (Disabled)
+            if (this.Disabled)
             {
                 return buf;
             }

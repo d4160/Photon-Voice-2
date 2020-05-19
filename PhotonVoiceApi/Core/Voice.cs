@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="Voice.cs" company="Exit Games GmbH">
 //   Photon Voice API Framework for Photon - Copyright (C) 2017 Exit Games GmbH
 // </copyright>
@@ -7,12 +7,15 @@
 // </summary>
 // <author>developer@photonengine.com</author>
 // ----------------------------------------------------------------------------
+
 using System;
+
 using System.Collections.Generic;
 using System.Threading;
 #if NETFX_CORE
 using Windows.System.Threading;
 #endif
+
 namespace Photon.Voice
 {
     /// <summary>
@@ -25,6 +28,7 @@ namespace Photon.Voice
         /// <returns>True if buffer was filled successfully, false otherwise.</returns>
         bool Read(T[] buffer);
     }
+
     /// <summary>
     /// Interface for classes that want their Service() function to be called regularly in the context of a LocalVoice.
     /// </summary>
@@ -33,12 +37,14 @@ namespace Photon.Voice
         /// <summary>Service function that should be called regularly.</summary>
         void Service(LocalVoice localVoice);
     }
+
     /// <summary>
     /// Represents outgoing data stream.
     /// </summary>
     public class LocalVoice : IDisposable
     {
         public const int DATA_POOL_CAPACITY = 50; // TODO: may depend on data type and properties, set for average audio stream
+
         [Obsolete("Use InterestGroup.")]
         public byte Group { get { return InterestGroup; } set { InterestGroup = value; } }
         /// <summary>If InterestGroup != 0, voice's data is sent only to clients listening to this group (if supported by transport).</summary>
@@ -47,22 +53,30 @@ namespace Photon.Voice
         public VoiceInfo Info { get { return info; } }
         /// <summary>If true, stream data broadcasted.</summary>
         public bool TransmitEnabled { get; set; }
+
         /// <summary>Returns true if stream broadcasts.</summary>
         public bool IsCurrentlyTransmitting { get; protected set; }
+
         /// <summary>Sent frames counter.</summary>
         public int FramesSent { get; private set; }
+
         /// <summary>Sent frames bytes counter.</summary>
         public int FramesSentBytes { get; private set; }
+
         /// <summary>Send data reliable.</summary>
         public bool Reliable { get; set; }
+
         /// <summary>Send data encrypted.</summary>
         public bool Encrypt { get; set; }
+
         /// <summary>Optional user object attached to LocalVoice. its Service() will be called at each VoiceClient.Service() call.</summary>
         public IServiceable LocalUserServiceable { get; set; }
+
         virtual public IEncoder CreateDefaultEncoder(VoiceInfo info)
         {
             throw new UnsupportedCodecException("LocalVoice.CreateDefaultEncoder", info.Codec, Logger);
         }
+
         /// <summary>
         /// If true, outgoing stream routed back to client via server same way as for remote client's streams.
         /// Can be swithed any time. OnRemoteVoiceInfoAction and OnRemoteVoiceRemoveAction are triggered if required.
@@ -84,19 +98,24 @@ namespace Photon.Voice
             }
         }
         bool debugEchoMode;
+
         internal ILogger Logger { get { return voiceClient.transport; } }
+
 #region nonpublic
+
         internal VoiceInfo info;
         protected IEncoder encoder;
         internal byte id;
         internal int channelId;
         internal byte evNumber = 0; // sequence used by receivers to detect loss. will overflow.
         protected VoiceClient voiceClient;
+
         volatile protected bool disposed;
         protected object disposeLock = new object();
         internal LocalVoice() // for dummy voices
         {
         }
+
         internal LocalVoice(VoiceClient voiceClient, IEncoder encoder, byte id, VoiceInfo voiceInfo, int channelId)
         {            
             this.TransmitEnabled = true;
@@ -115,6 +134,7 @@ namespace Photon.Voice
             }
             this.encoder.Output = sendFrame;
         }
+
         internal string Name { get { return "Local " + info.Codec + " v#" + id + " ch#" + voiceClient.channelStr(channelId); } }
         internal string LogPrefix { get { return "[PV] " + Name; } }
         
@@ -149,22 +169,29 @@ namespace Photon.Voice
                 this.IsCurrentlyTransmitting = true;
                 noTransmitCnt--;
             }
+
             if (LocalUserServiceable != null)
             {
                 LocalUserServiceable.Service(this);
             }
         }
+
         internal void sendFrame(ArraySegment<byte> compressed)
         {
             this.FramesSent++;
             this.FramesSentBytes += compressed.Count;
+
             this.voiceClient.transport.SendFrame(compressed, evNumber, id, this.channelId, this);
+
             this.eventTimestamps[evNumber] = Environment.TickCount;
             evNumber++;
+
             resetNoTransmitCnt();
         }
+
         internal Dictionary<byte, int> eventTimestamps = new Dictionary<byte, int>();
 #endregion
+
         /// <summary>Remove this voice from it's VoiceClient (using VoiceClient.RemoveLocalVoice</summary>.</summary>
         public void RemoveSelf()
         {
@@ -173,6 +200,7 @@ namespace Photon.Voice
 	            this.voiceClient.RemoveLocalVoice(this);
 			}
         }
+
         public virtual void Dispose()
         {
             if (!disposed)
@@ -185,6 +213,7 @@ namespace Photon.Voice
             }
         }
     }
+
     /// <summary>Event Actions and other options for a remote voice (incoming stream).</summary>
     public struct RemoteVoiceOptions
     {
@@ -213,12 +242,15 @@ namespace Photon.Voice
         
         /// <summary>Remote voice data decoder. Use to set decoder options or override it with user decoder.</summary>
         public IDecoder Decoder { get; set; }
+
         public ImageFormat OutputImageFormat { get; set; }
         public Flip OutputImageFlip { get; set; }
+
         internal enum OutputType { None, Float, Short, Image};
         internal OutputType outType { get; private set; }
         internal Object output { get; private set; }
 }
+
     internal class RemoteVoice : IDisposable
     {
         // Client.RemoteVoiceInfos support
@@ -238,6 +270,7 @@ namespace Photon.Voice
             this.voiceId = voiceId;
             this.Info = info;
             this.lastEvNumber = lastEventNumber;
+
 #if NETFX_CORE
             ThreadPool.RunAsync((x) =>
             {
@@ -249,14 +282,18 @@ namespace Photon.Voice
             t.Start();
 #endif
         }
+
         protected string Name { get { return "Remote " + Info.Codec +  " v#" + voiceId + " ch#" + voiceClient.channelStr(channelId) + " p#" + playerId; } }
         protected string LogPrefix { get { return "[PV] " + Name; } }
+
         internal byte lastEvNumber = 0;
         private VoiceClient voiceClient;
+
         private static byte byteDiff(byte latest, byte last)
         {
             return (byte)(latest - (last + 1));
         }
+
         internal void receiveBytes(byte[] receivedBytes, byte evNumber)
         {
             // receive-gap detection and compensation
@@ -282,13 +319,16 @@ namespace Photon.Voice
             }
             this.receiveFrame(receivedBytes);
         }
+
         Queue<byte[]> frameQueue = new Queue<byte[]>();
         AutoResetEvent frameQueueReady = new AutoResetEvent(false);
+
         void receiveFrame(byte[] frame)
         {
             lock (disposeLock) // sync with Dispose and decodeThread 'finally'
             {
                 if (disposed) return;
+
                 lock (frameQueue)
                 {
                     frameQueue.Enqueue(frame);
@@ -296,11 +336,13 @@ namespace Photon.Voice
                 frameQueueReady.Set();
             }
         }
+
         void receiveNullFrames(int count)
         {
             lock (disposeLock) // sync with Dispose and decodeThread 'finally'
             {
                 if (disposed) return;
+
                 lock (frameQueue)
                 {
                     for (int i = 0; i < count; i++)
@@ -311,6 +353,7 @@ namespace Photon.Voice
                 frameQueueReady.Set();
             }
         }
+
         IDecoder createDefaultDecoder()
         {
             switch (options.outType)
@@ -380,11 +423,14 @@ namespace Photon.Voice
                     return null;
             }
         }
+
         void decodeThread()
         {
+
 //#if UNITY_5_3_OR_NEWER
 //            UnityEngine.Profiling.Profiler.BeginThreadProfiling("PhotonVoice", LogPrefix);
 //#endif
+
             IDecoder decoder;
             if (this.options.Decoder == null)
             {
@@ -402,6 +448,7 @@ namespace Photon.Voice
                     voiceClient.transport.LogError(LogPrefix + ": Setting decoder output with RemoteVoiceOptions SetOutput is not supported for custom decoders (set via RemoteVoiceOptions Decoder property). Assign output directly to decoder (output type = " + options.outType + ")");
                 }
             }
+
             if (decoder == null)
             {
                 lock (disposeLock)
@@ -410,19 +457,25 @@ namespace Photon.Voice
                 }
                 return;
             }
+
             voiceClient.transport.LogInfo(LogPrefix + ": Starting decode thread");
+
             try
             {
                 decoder.Open(Info);
+
                 while (!disposed)
                 {
                     frameQueueReady.WaitOne(); // Wait until data is pushed to the queue or Dispose signals.
+
 //#if UNITY_5_3_OR_NEWER
 //                    UnityEngine.Profiling.Profiler.BeginSample("Decoder");
 //#endif
+
                     while (true) // Dequeue and process while the queue is not empty
                     {
                         if (disposed) break; // early exit to save few resources
+
                         byte[] f = null;
                         bool ok = false;
                         lock (frameQueue)
@@ -442,9 +495,11 @@ namespace Photon.Voice
                             break;
                         }
                     }
+
 //#if UNITY_5_3_OR_NEWER
 //                    UnityEngine.Profiling.Profiler.EndSample();
 //#endif
+
                 }
             }
             catch (Exception e)
@@ -469,12 +524,16 @@ namespace Photon.Voice
                     frameQueue.Clear();
                 }
                 decoder.Dispose();
+
                 voiceClient.transport.LogInfo(LogPrefix + ": Exiting decode thread");
+
 //#if UNITY_5_3_OR_NEWER
 //                UnityEngine.Profiling.Profiler.EndThreadProfiling();
 //#endif
+
             }
         }
+
         internal void removeAndDispose()
         {
             if (options.OnRemoteVoiceRemoveAction != null)
@@ -483,6 +542,7 @@ namespace Photon.Voice
             }
             Dispose();
         }
+
         public void Dispose()
         {
             lock (disposeLock) // sync with receiveFrame/receiveNullFrames

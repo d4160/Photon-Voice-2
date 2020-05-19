@@ -49,6 +49,9 @@ namespace Photon.Voice.Unity.Editor
         private SerializedProperty loopAudioClipSp;
         private SerializedProperty reactOnSystemChangesSp;
         private SerializedProperty autoStartSp;
+        private SerializedProperty recordOnlyWhenEnabledSp;
+        private SerializedProperty skipDeviceChecksSp;
+        private SerializedProperty stopRecordingWhenPausedSp;
 
         #if UNITY_IOS
         private SerializedProperty useCustomAudioSessionParametersSp;
@@ -65,7 +68,7 @@ namespace Photon.Voice.Unity.Editor
 
         private void OnEnable()
         {
-            recorder = target as Recorder;
+            this.recorder = this.target as Recorder;
             AudioSettings.OnAudioConfigurationChanged += this.OnAudioConfigChanged;
             this.RefreshMicrophones();
             this.voiceDetectionSp = this.serializedObject.FindProperty("voiceDetection");
@@ -87,6 +90,9 @@ namespace Photon.Voice.Unity.Editor
             this.loopAudioClipSp = this.serializedObject.FindProperty("loopAudioClip");
             this.reactOnSystemChangesSp = this.serializedObject.FindProperty("reactOnSystemChanges");
             this.autoStartSp = this.serializedObject.FindProperty("autoStart");
+            this.recordOnlyWhenEnabledSp = this.serializedObject.FindProperty("recordOnlyWhenEnabled");
+            this.skipDeviceChecksSp = this.serializedObject.FindProperty("skipDeviceChangeChecks");
+            this.stopRecordingWhenPausedSp = this.serializedObject.FindProperty("stopRecordingWhenPaused");
             #if UNITY_IOS
             useCustomAudioSessionParametersSp = serializedObject.FindProperty("useCustomAudioSessionParameters");
             audioSessionPresetIndexSp = serializedObject.FindProperty("audioSessionPresetIndex");
@@ -106,75 +112,86 @@ namespace Photon.Voice.Unity.Editor
 
         public override void OnInspectorGUI()
         {
-            serializedObject.UpdateIfRequiredOrScript();
+            this.serializedObject.UpdateIfRequiredOrScript();
             //serializedObject.Update();
 
-            if (PhotonVoiceEditorUtils.IsInTheSceneInPlayMode(recorder.gameObject))
+            if (PhotonVoiceEditorUtils.IsInTheSceneInPlayMode(this.recorder.gameObject))
             {
-                if (recorder.RequiresRestart)
+                if (this.recorder.RequiresRestart)
                 {
                     EditorGUILayout.HelpBox("Recorder requires restart. Call Recorder.RestartRecording().", MessageType.Warning);
                     if (GUILayout.Button("RestartRecording"))
                     {
-                        recorder.RestartRecording();
+                        this.recorder.RestartRecording();
                     }
                 }
-                else if (!recorder.IsInitialized)
+                else if (!this.recorder.IsInitialized)
                 {
                     EditorGUILayout.HelpBox("Recorder requires initialization. Call Recorder.Init or VoiceConnection.InitRecorder.", MessageType.Warning);
                 }
             }
-            VoiceLogger.ExposeLogLevel(serializedObject, recorder);
+            VoiceLogger.ExposeLogLevel(this.serializedObject, this.recorder);
 
             EditorGUI.BeginChangeCheck();
-            if (Application.isPlaying)
+            if (EditorApplication.isPlaying)
             {
-                recorder.ReactOnSystemChanges = EditorGUILayout.Toggle(new GUIContent("React On System Changes", "If true, recording is restarted when Unity detects Audio Config. changes."), recorder.ReactOnSystemChanges);
-                recorder.TransmitEnabled = EditorGUILayout.Toggle(new GUIContent("Transmit Enabled", "If true, audio transmission is enabled."), recorder.TransmitEnabled);
-                if (recorder.IsInitialized)
+                this.recorder.ReactOnSystemChanges = EditorGUILayout.Toggle(new GUIContent("React On System Changes", "If true, recording is restarted when Unity detects Audio Config. changes."), this.recorder.ReactOnSystemChanges);
+                if (this.recorder.ReactOnSystemChanges)
                 {
-                    recorder.IsRecording = EditorGUILayout.Toggle(new GUIContent("IsRecording", "If true, audio recording is on."), recorder.IsRecording);
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(this.skipDeviceChecksSp, new GUIContent("Skip Device Checks", "If true, restarts recording without checking if audio config/device changes affected recording."));
+                    EditorGUI.indentLevel--;
+                }
+                this.recorder.RecordOnlyWhenEnabled = EditorGUILayout.Toggle(new GUIContent("Record Only When Enabled", "If true, component will work only when enabled and active in hierarchy."),
+                    this.recorder.RecordOnlyWhenEnabled);
+                EditorGUILayout.PropertyField(this.stopRecordingWhenPausedSp,
+                    new GUIContent("Stop Recording When Paused",
+                        "If true, stop recording when paused resume/restart when un-paused."));
+                this.recorder.TransmitEnabled = EditorGUILayout.Toggle(new GUIContent("Transmit Enabled", "If true, audio transmission is enabled."), this.recorder.TransmitEnabled);
+                if (this.recorder.IsInitialized)
+                {
+                    this.recorder.IsRecording = EditorGUILayout.Toggle(new GUIContent("IsRecording", "If true, audio recording is on."), this.recorder.IsRecording);
                 }
                 else
                 {
                     EditorGUILayout.PropertyField(this.autoStartSp,
                         new GUIContent("Auto Start", "If true, recording is started when Recorder is initialized."));
                 }
-                if (recorder.IsRecording && recorder.TransmitEnabled)
+                if (this.recorder.IsRecording && this.recorder.TransmitEnabled)
                 {
                     float amplitude = 0f;
-                    if (recorder.IsCurrentlyTransmitting)
+                    if (this.recorder.IsCurrentlyTransmitting)
                     {
-                        amplitude = recorder.LevelMeter.CurrentPeakAmp;
+                        amplitude = this.recorder.LevelMeter.CurrentPeakAmp;
                     }
                     EditorGUILayout.Slider("Level", amplitude, 0, 1);
                 }
-                recorder.Encrypt = EditorGUILayout.Toggle(new GUIContent("Encrypt", "If true, voice stream is sent encrypted."), recorder.Encrypt);
-                recorder.InterestGroup = (byte)EditorGUILayout.IntField(new GUIContent("Interest Group", "Target interest group that will receive transmitted audio."), recorder.InterestGroup);
-                if (recorder.InterestGroup == 0)
+                this.recorder.Encrypt = EditorGUILayout.Toggle(new GUIContent("Encrypt", "If true, voice stream is sent encrypted."), this.recorder.Encrypt);
+                this.recorder.InterestGroup = (byte)EditorGUILayout.IntField(new GUIContent("Interest Group", "Target interest group that will receive transmitted audio."), this.recorder.InterestGroup);
+                if (this.recorder.InterestGroup == 0)
                 {
-                    recorder.DebugEchoMode = EditorGUILayout.Toggle(new GUIContent("Debug Echo", "If true, outgoing stream routed back to client via server same way as for remote client's streams."), recorder.DebugEchoMode);
+                    this.recorder.DebugEchoMode = EditorGUILayout.Toggle(new GUIContent("Debug Echo", "If true, outgoing stream routed back to client via server same way as for remote client's streams."), this.recorder.DebugEchoMode);
                 }
-                recorder.ReliableMode = EditorGUILayout.Toggle(new GUIContent("Reliable Mode", "If true, stream data sent in reliable mode."), recorder.ReliableMode);
+                this.recorder.ReliableMode = EditorGUILayout.Toggle(new GUIContent("Reliable Mode", "If true, stream data sent in reliable mode."), this.recorder.ReliableMode);
 
                 EditorGUILayout.LabelField("Codec Parameters", EditorStyles.boldLabel);
-                recorder.FrameDuration = (OpusCodec.FrameDuration)EditorGUILayout.EnumPopup(new GUIContent("Frame Duration", "Outgoing audio stream encoder delay."), recorder.FrameDuration);
-                recorder.SamplingRate = (POpusCodec.Enums.SamplingRate)EditorGUILayout.EnumPopup(
-                    new GUIContent("Sampling Rate", "Outgoing audio stream sampling rate."), recorder.SamplingRate);
-                recorder.Bitrate = EditorGUILayout.IntField(new GUIContent("Bitrate", "Outgoing audio stream bitrate."),
-                    recorder.Bitrate);
+                this.recorder.FrameDuration = (OpusCodec.FrameDuration)EditorGUILayout.EnumPopup(new GUIContent("Frame Duration", "Outgoing audio stream encoder delay."), this.recorder.FrameDuration);
+                this.recorder.SamplingRate = (POpusCodec.Enums.SamplingRate)EditorGUILayout.EnumPopup(
+                    new GUIContent("Sampling Rate", "Outgoing audio stream sampling rate."), this.recorder.SamplingRate);
+                this.recorder.Bitrate = EditorGUILayout.IntField(new GUIContent("Bitrate", "Outgoing audio stream bitrate."),
+                    this.recorder.Bitrate);
 
                 EditorGUILayout.LabelField("Audio Source Settings", EditorStyles.boldLabel);
-                recorder.SourceType = (Recorder.InputSourceType) EditorGUILayout.EnumPopup(new GUIContent("Input Source Type", "Input audio data source type"), recorder.SourceType);
-                switch (recorder.SourceType)
+                this.recorder.SourceType = (Recorder.InputSourceType) EditorGUILayout.EnumPopup(new GUIContent("Input Source Type", "Input audio data source type"), this.recorder.SourceType);
+                switch (this.recorder.SourceType)
                 {
                     case Recorder.InputSourceType.Microphone:
-                        recorder.MicrophoneType = (Recorder.MicType) EditorGUILayout.EnumPopup(
+                        this.recorder.MicrophoneType = (Recorder.MicType) EditorGUILayout.EnumPopup(
                             new GUIContent("Microphone Type",
                                 "Which microphone API to use when the Source is set to Microphone."),
-                            recorder.MicrophoneType);
+                            this.recorder.MicrophoneType);
                         EditorGUILayout.HelpBox("Devices list and current selection is valid in Unity Editor only. In build, you need to set it via code preferably at runtime.", MessageType.Info);
-                        switch (recorder.MicrophoneType)
+                        switch (this.recorder.MicrophoneType)
                         {
                             case Recorder.MicType.Unity:
                                 if (Microphone.devices.Length == 0)
@@ -183,10 +200,10 @@ namespace Photon.Voice.Unity.Editor
                                 }
                                 else
                                 {
-                                    unityMicrophoneDeviceIndex = EditorGUILayout.Popup("Microphone Device", unityMicrophoneDeviceIndex, Microphone.devices);
-                                    recorder.UnityMicrophoneDevice = Microphone.devices[unityMicrophoneDeviceIndex];
+                                    this.unityMicrophoneDeviceIndex = EditorGUILayout.Popup("Microphone Device", this.unityMicrophoneDeviceIndex, Microphone.devices);
+                                    this.recorder.UnityMicrophoneDevice = Microphone.devices[this.unityMicrophoneDeviceIndex];
                                     int minFreq, maxFreq;
-                                    Microphone.GetDeviceCaps(Microphone.devices[unityMicrophoneDeviceIndex], out minFreq, out maxFreq);
+                                    Microphone.GetDeviceCaps(Microphone.devices[this.unityMicrophoneDeviceIndex], out minFreq, out maxFreq);
                                     EditorGUILayout.LabelField("Microphone Device Caps", string.Format("{0}..{1} Hz", minFreq, maxFreq));
                                 }
                                 break;
@@ -201,8 +218,8 @@ namespace Photon.Voice.Unity.Editor
                                     else
                                     {
                                         EditorGUILayout.BeginHorizontal();
-                                        photonDeviceIndex = EditorGUILayout.Popup("Microphone Device", photonDeviceIndex, photonDeviceNames);
-                                        recorder.PhotonMicrophoneDeviceId = photonDeviceIDs[photonDeviceIndex];
+                                        this.photonDeviceIndex = EditorGUILayout.Popup("Microphone Device", this.photonDeviceIndex, this.photonDeviceNames);
+                                        this.recorder.PhotonMicrophoneDeviceId = this.photonDeviceIDs[this.photonDeviceIndex];
                                         if (GUILayout.Button("Refresh", EditorStyles.miniButton, GUILayout.Width(70)))
                                         {
                                             this.RefreshPhotonMicrophoneDevices();
@@ -212,7 +229,7 @@ namespace Photon.Voice.Unity.Editor
                                 }
                                 else
                                 {
-                                    recorder.PhotonMicrophoneDeviceId = -1;
+                                    this.recorder.PhotonMicrophoneDeviceId = -1;
                                     EditorGUILayout.HelpBox("PhotonMicrophoneEnumerator Not Supported", MessageType.Error);
                                 }
                                 #endif
@@ -266,10 +283,10 @@ namespace Photon.Voice.Unity.Editor
                         }
                         break;
                     case Recorder.InputSourceType.AudioClip:
-                        recorder.AudioClip = EditorGUILayout.ObjectField(new GUIContent("Audio Clip", "Source audio clip."), recorder.AudioClip, typeof(AudioClip), false) as AudioClip;
-                        recorder.LoopAudioClip =
+                        this.recorder.AudioClip = EditorGUILayout.ObjectField(new GUIContent("Audio Clip", "Source audio clip."), this.recorder.AudioClip, typeof(AudioClip), false) as AudioClip;
+                        this.recorder.LoopAudioClip =
                             EditorGUILayout.Toggle(new GUIContent("Loop", "Loop playback for audio clip sources."),
-                                recorder.LoopAudioClip);
+                                this.recorder.LoopAudioClip);
                         break;
                     case Recorder.InputSourceType.Factory:
                         EditorGUILayout.HelpBox("Add a custom InputFactory method in code.", MessageType.Info);
@@ -278,28 +295,28 @@ namespace Photon.Voice.Unity.Editor
                         throw new ArgumentOutOfRangeException();
                 }
                 EditorGUILayout.LabelField("Voice Activity Detection (VAD)", EditorStyles.boldLabel);
-                recorder.VoiceDetection = EditorGUILayout.Toggle(new GUIContent("Detect", "If true, voice detection enabled."), recorder.VoiceDetection);
-                if (recorder.VoiceDetection)
+                this.recorder.VoiceDetection = EditorGUILayout.Toggle(new GUIContent("Detect", "If true, voice detection enabled."), this.recorder.VoiceDetection);
+                if (this.recorder.VoiceDetection)
                 {
-                    recorder.VoiceDetectionThreshold =
+                    this.recorder.VoiceDetectionThreshold =
                         EditorGUILayout.Slider(
                             new GUIContent("Threshold", "Voice detection threshold (0..1, where 1 is full amplitude)."),
-                            recorder.VoiceDetectionThreshold, 0f, 1f);
-                    recorder.VoiceDetectionDelayMs =
-                        EditorGUILayout.IntField(new GUIContent("Delay (ms)", "Keep detected state during this time after signal level dropped below threshold. Default is 500ms"), recorder.VoiceDetectionDelayMs);
+                            this.recorder.VoiceDetectionThreshold, 0f, 1f);
+                    this.recorder.VoiceDetectionDelayMs =
+                        EditorGUILayout.IntField(new GUIContent("Delay (ms)", "Keep detected state during this time after signal level dropped below threshold. Default is 500ms"), this.recorder.VoiceDetectionDelayMs);
                     EditorGUILayout.HelpBox("Do not speak and stay in a silent environment when calibrating.", MessageType.Info);
-                    if (recorder.VoiceDetectorCalibrating)
+                    if (this.recorder.VoiceDetectorCalibrating)
                     {
-                        EditorGUILayout.LabelField(string.Format("Calibrating {0} ms", calibrationTime));
+                        EditorGUILayout.LabelField(string.Format("Calibrating {0} ms", this.calibrationTime));
                     }
                     else
                     {
-                        calibrationTime = EditorGUILayout.IntField("Calibration Time (ms)", calibrationTime);
-                        if (recorder.IsRecording && recorder.TransmitEnabled)
+                        this.calibrationTime = EditorGUILayout.IntField("Calibration Time (ms)", this.calibrationTime);
+                        if (this.recorder.IsRecording && this.recorder.TransmitEnabled)
                         {
                             if (GUILayout.Button("Calibrate"))
                             {
-                                recorder.VoiceDetectorCalibrate(calibrationTime);
+                                this.recorder.VoiceDetectorCalibrate(this.calibrationTime);
                             }
                         }
                     }
@@ -310,6 +327,18 @@ namespace Photon.Voice.Unity.Editor
                 EditorGUILayout.PropertyField(this.reactOnSystemChangesSp,
                     new GUIContent("React On System Changes",
                         "If true, recording is restarted when Unity detects Audio Config. changes."));
+                if (this.reactOnSystemChangesSp.boolValue)
+                {
+                    EditorGUI.indentLevel++;
+                    EditorGUILayout.PropertyField(this.skipDeviceChecksSp, new GUIContent("Skip Device Checks", "If true, restarts recording without checking if audio config/device changes affected recording."));
+                    EditorGUI.indentLevel--;
+                }
+                EditorGUILayout.PropertyField(this.recordOnlyWhenEnabledSp,
+                    new GUIContent("Record Only When Enabled",
+                        "If true, component will work only when enabled and active in hierarchy."));
+                EditorGUILayout.PropertyField(this.stopRecordingWhenPausedSp,
+                    new GUIContent("Stop Recording When Paused",
+                        "If true, stop recording when paused resume/restart when un-paused."));
                 EditorGUILayout.PropertyField(this.transmitEnabledSp,
                     new GUIContent("Transmit Enabled", "If true, audio transmission is enabled."));
                 EditorGUILayout.PropertyField(this.autoStartSp,
@@ -349,7 +378,7 @@ namespace Photon.Voice.Unity.Editor
                         EditorGUILayout.PropertyField(this.microphoneTypeSp, new GUIContent("Microphone Type",
                             "Which microphone API to use when the Source is set to Microphone."));
                         EditorGUILayout.HelpBox("Devices list and current selection is valid in Unity Editor only. In build, you need to set it via code preferably at runtime.", MessageType.Info);
-                        switch (recorder.MicrophoneType)
+                        switch (this.recorder.MicrophoneType)
                         {
                             case Recorder.MicType.Unity:
                                 if (Microphone.devices.Length == 0)
@@ -358,10 +387,10 @@ namespace Photon.Voice.Unity.Editor
                                 }
                                 else
                                 {
-                                    unityMicrophoneDeviceIndex = EditorGUILayout.Popup("Microphone Device", unityMicrophoneDeviceIndex, Microphone.devices);
-                                    this.unityMicrophoneDeviceSp.stringValue = Microphone.devices[unityMicrophoneDeviceIndex];
+                                    this.unityMicrophoneDeviceIndex = EditorGUILayout.Popup("Microphone Device", this.unityMicrophoneDeviceIndex, Microphone.devices);
+                                    this.unityMicrophoneDeviceSp.stringValue = Microphone.devices[this.unityMicrophoneDeviceIndex];
                                     int minFreq, maxFreq;
-                                    Microphone.GetDeviceCaps(Microphone.devices[unityMicrophoneDeviceIndex], out minFreq, out maxFreq);
+                                    Microphone.GetDeviceCaps(Microphone.devices[this.unityMicrophoneDeviceIndex], out minFreq, out maxFreq);
                                     EditorGUILayout.LabelField("Microphone Device Caps", string.Format("{0}..{1} Hz", minFreq, maxFreq));
                                 }
                                 break;
@@ -376,8 +405,8 @@ namespace Photon.Voice.Unity.Editor
                                     else
                                     {
                                         EditorGUILayout.BeginHorizontal();
-                                        photonDeviceIndex = EditorGUILayout.Popup("Microphone Device", photonDeviceIndex, photonDeviceNames);
-                                        this.photonMicrophoneDeviceIdSp.intValue = photonDeviceIDs[photonDeviceIndex];
+                                        this.photonDeviceIndex = EditorGUILayout.Popup("Microphone Device", this.photonDeviceIndex, this.photonDeviceNames);
+                                        this.photonMicrophoneDeviceIdSp.intValue = this.photonDeviceIDs[this.photonDeviceIndex];
                                         if (GUILayout.Button("Refresh", EditorStyles.miniButton, GUILayout.Width(70)))
                                         {
                                             this.RefreshPhotonMicrophoneDevices();
@@ -387,7 +416,7 @@ namespace Photon.Voice.Unity.Editor
                                 }
                                 else
                                 {
-                                    recorder.PhotonMicrophoneDeviceId = -1;
+                                    this.recorder.PhotonMicrophoneDeviceId = -1;
                                     EditorGUILayout.HelpBox("PhotonMicrophoneEnumerator Not Supported", MessageType.Error);
                                 }
                                 #endif
@@ -467,7 +496,7 @@ namespace Photon.Voice.Unity.Editor
 
             if (EditorGUI.EndChangeCheck())
             {
-                serializedObject.ApplyModifiedProperties();
+                this.serializedObject.ApplyModifiedProperties();
             }
         }
 
@@ -483,12 +512,12 @@ namespace Photon.Voice.Unity.Editor
         {
             if (Microphone.devices.Length == 0)
             {
-                recorder.UnityMicrophoneDevice = null;
-                unityMicrophoneDeviceIndex = 0;
+                this.recorder.UnityMicrophoneDevice = null;
+                this.unityMicrophoneDeviceIndex = 0;
             }
             else
             {
-                unityMicrophoneDeviceIndex = Mathf.Clamp(ArrayUtility.IndexOf(Microphone.devices, recorder.UnityMicrophoneDevice), 0, Microphone.devices.Length - 1);
+                this.unityMicrophoneDeviceIndex = Mathf.Clamp(ArrayUtility.IndexOf(Microphone.devices, this.recorder.UnityMicrophoneDevice), 0, Microphone.devices.Length - 1);
             }
             #if PHOTON_MICROPHONE_ENUMERATOR
             this.RefreshPhotonMicrophoneDevices();
@@ -503,19 +532,19 @@ namespace Photon.Voice.Unity.Editor
                 Recorder.PhotonMicrophoneEnumerator.Refresh();
                 if (Recorder.PhotonMicrophoneEnumerator.Count == 0)
                 {
-                    recorder.PhotonMicrophoneDeviceId = -1;
-                    photonDeviceNames = null;
-                    photonDeviceIDs = null;
-                    photonDeviceIndex = 0;
+                    this.recorder.PhotonMicrophoneDeviceId = -1;
+                    this.photonDeviceNames = null;
+                    this.photonDeviceIDs = null;
+                    this.photonDeviceIndex = 0;
                 }
                 else
                 {
-                    photonDeviceNames = new string[Recorder.PhotonMicrophoneEnumerator.Count];
-                    photonDeviceIDs = new int[Recorder.PhotonMicrophoneEnumerator.Count];
-                    List<string> tempNames = new List<string>(photonDeviceNames.Length);
+                    this.photonDeviceNames = new string[Recorder.PhotonMicrophoneEnumerator.Count];
+                    this.photonDeviceIDs = new int[Recorder.PhotonMicrophoneEnumerator.Count];
+                    List<string> tempNames = new List<string>(this.photonDeviceNames.Length);
                     for (int i = 0; i < Recorder.PhotonMicrophoneEnumerator.Count; i++)
                     {
-                        photonDeviceIDs[i] = Recorder.PhotonMicrophoneEnumerator.IDAtIndex(i);
+                        this.photonDeviceIDs[i] = Recorder.PhotonMicrophoneEnumerator.IDAtIndex(i);
                         string micName = Recorder.PhotonMicrophoneEnumerator.NameAtIndex(i);
                         int count = 0;
                         for (int j = 0; j < tempNames.Count; j++)
@@ -525,17 +554,17 @@ namespace Photon.Voice.Unity.Editor
                                 count++;
                             }
                         }
-                        tempNames.Add(string.Format("{0} - {1}{2}", photonDeviceIDs[i], micName, count == 0 ? string.Empty : string.Format(" {0}", count)));
+                        tempNames.Add(string.Format("{0} - {1}{2}", this.photonDeviceIDs[i], micName, count == 0 ? string.Empty : string.Format(" {0}", count)));
                     }
-                    photonDeviceNames = tempNames.ToArray();
-                    photonDeviceIndex = Mathf.Clamp(Array.IndexOf(photonDeviceIDs,
-                            recorder.PhotonMicrophoneDeviceId), 0, Recorder.PhotonMicrophoneEnumerator.Count - 1);
-                    recorder.PhotonMicrophoneDeviceId = photonDeviceIDs[photonDeviceIndex];
+                    this.photonDeviceNames = tempNames.ToArray();
+                    this.photonDeviceIndex = Mathf.Clamp(Array.IndexOf(this.photonDeviceIDs,
+                            this.recorder.PhotonMicrophoneDeviceId), 0, Recorder.PhotonMicrophoneEnumerator.Count - 1);
+                    this.recorder.PhotonMicrophoneDeviceId = this.photonDeviceIDs[this.photonDeviceIndex];
                 }
             }
             else
             {
-                recorder.PhotonMicrophoneDeviceId = -1;
+                this.recorder.PhotonMicrophoneDeviceId = -1;
             }
             
         }

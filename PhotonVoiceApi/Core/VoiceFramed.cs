@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="VoiceFramed.cs" company="Exit Games GmbH">
 //   Photon Voice API Framework for Photon - Copyright (C) 2017 Exit Games GmbH
 // </copyright>
@@ -7,12 +7,14 @@
 // </summary>
 // <author>developer@photonengine.com</author>
 // ----------------------------------------------------------------------------
+
 using System;
 using System.Collections.Generic;
 using System.Threading;
 #if NETFX_CORE
 using Windows.System.Threading;
 #endif
+
 namespace Photon.Voice
 {
     /// <summary>Audio Processor interface.</summary>
@@ -23,10 +25,12 @@ namespace Photon.Voice
         /// <returns>Buffer containing output audio data</returns>
         T[] Process(T[] buf);
     }
+
     /// <summary>Utility class to re-frame audio packets.</summary>
     public class Framer<T>
     {
         T[] frame;
+
         /// <summary>Create new Framer instance.</summary>
         public Framer(int frameSize)
         {
@@ -40,9 +44,11 @@ namespace Photon.Voice
                 this.sizeofT = sizeof(float);
             else
                 throw new Exception("Input data type is not supported: " + x[0].GetType());
+
         }
         int sizeofT;
         int framePos = 0;
+
         /// <summary>Get the number of frames available after adding bufLen samples.</summary>
         /// <param name="bufLen">Number of samples that would be added.</param>
         /// <returns>Number of full frames available when adding bufLen samples.</returns>
@@ -50,6 +56,7 @@ namespace Photon.Voice
         {
             return (bufLen + framePos) / frame.Length;
         }
+
         /// <summary>Append arbitrary-sized buffer and return available full frames.</summary>
         /// <param name="buf">Array of samples to add.</param>
         /// <returns>Enumerator of full frames (might be none).</returns>
@@ -63,6 +70,7 @@ namespace Photon.Voice
             else
             {
                 var bufPos = 0;
+
                 while (frame.Length - framePos <= buf.Length - bufPos)
                 {
                     var l = frame.Length - framePos;
@@ -70,6 +78,7 @@ namespace Photon.Voice
                     //Console.WriteLine("=== Y {0} {1} -> {2} {3} ", bufPos, bufPos + l, sourceFramePos, sourceFramePos + l);
                     bufPos += l;
                     framePos = 0;
+
                     yield return this.frame;
                 }
                 if (bufPos != buf.Length)
@@ -82,6 +91,7 @@ namespace Photon.Voice
             }
         }
     }
+
     /// <summary>
     /// Typed re-framing LocalVoice
     /// </summary>
@@ -90,12 +100,14 @@ namespace Photon.Voice
     {
         /// <summary>Data flow will be repacked to frames of this size. May differ from input voiceInfo.FrameSize. Processors should resample in this case.</summary>
         public int FrameSize { get; private set; }
+
         internal LocalVoiceFramedBase(VoiceClient voiceClient, IEncoder encoder, byte id, VoiceInfo voiceInfo, int channelId, int frameSize)
         : base(voiceClient, encoder, id, voiceInfo, channelId)
         {
             this.FrameSize = frameSize;
         }
     }
+
     /// <summary>
     /// Typed re-framing LocalVoice
     /// </summary>
@@ -107,6 +119,7 @@ namespace Photon.Voice
     public class LocalVoiceFramed<T> : LocalVoiceFramedBase
     {
         Framer<T> framer;
+
         // Optionally process input data. 
         // Should return arrays exactly of info.FrameSize size or null to skip sending
         internal T[] processFrame(T[] buf)
@@ -124,6 +137,7 @@ namespace Photon.Voice
             }
             return buf;
         }
+
         /// <summary>
         /// Adds processors after any built-in processors and everything added with AddPreProcessor.
         /// </summary>
@@ -138,7 +152,9 @@ namespace Photon.Voice
                 }
             }
         }
+
         int preProcessorsCnt;
+
         /// <summary>
         /// Adds processors before built-in processors and everything added with AddPostProcessor.
         /// </summary>
@@ -153,6 +169,7 @@ namespace Photon.Voice
                 }
             }
         }
+
         /// <summary>
         /// Clears all processors in pipeline including built-in resampling.
         /// User should add at least resampler processor after call.
@@ -165,7 +182,9 @@ namespace Photon.Voice
                 preProcessorsCnt = 0;
             }
         }
+
         List<IProcessor<T>> processors = new List<IProcessor<T>>();
+
         internal LocalVoiceFramed(VoiceClient voiceClient, IEncoder encoder, byte id, VoiceInfo voiceInfo, int channelId, int frameSize)
         : base(voiceClient, encoder, id, voiceInfo, channelId, frameSize)
 		{
@@ -174,21 +193,27 @@ namespace Photon.Voice
 				throw new Exception(LogPrefix + ": non 0 frame size required for framed stream");
 			}
 			this.framer = new Framer<T>(FrameSize);
+
             this.bufferFactory = new FactoryPrimitiveArrayPool<T>(DATA_POOL_CAPACITY, Name + " Data", FrameSize);
         }
+
         bool dataEncodeThreadStarted;
         Queue<T[]> pushDataQueue = new Queue<T[]>();
         AutoResetEvent pushDataQueueReady = new AutoResetEvent(false);
+
         public FactoryPrimitiveArrayPool<T> BufferFactory { get { return bufferFactory; } }
         FactoryPrimitiveArrayPool<T> bufferFactory;
+
         /// <summary>Wether this LocalVoiceFramed has capacity for more data buffers to be pushed asynchronously.</summary>
         public bool PushDataAsyncReady { get { lock (pushDataQueue) return pushDataQueue.Count < DATA_POOL_CAPACITY - 1; } } // 1 slot for buffer currently processed and not contained either by pool or queue
+
         /// <summary>Asynchronously push data into this stream.</summary>
         // Accepts array of arbitrary size. Automatically splits or aggregates input to buffers of length <see cref="FrameSize"></see>.
         // Expects buf content to be preserved until PushData is called from a worker thread. Releases buffer to <see cref="BufferFactory"></see> then.
         public void PushDataAsync(T[] buf)
         {
             if (disposed) return;
+
             if (!dataEncodeThreadStarted)
             {
                 voiceClient.transport.LogInfo(LogPrefix + ": Starting data encode thread");
@@ -204,6 +229,7 @@ namespace Photon.Voice
 #endif
                 dataEncodeThreadStarted = true;
             }
+
             // Caller should check this asap in general case if packet production is expensive.
             // This is not the case For lightweight audio stream. Also overflow does not happen for audio stream normally.
             // Make sure that queue is not too large even if caller missed the check.
@@ -231,20 +257,25 @@ namespace Photon.Voice
         bool exitThread = false;
         private void PushDataAsyncThread()
         {
+
 //#if UNITY_5_3_OR_NEWER
 //            UnityEngine.Profiling.Profiler.BeginThreadProfiling("PhotonVoice", LogPrefix);
 //#endif
+
             try
             {
                 while (!exitThread)
                 {
                     pushDataQueueReady.WaitOne(); // Wait until data is pushed to the queue or Dispose signals.
+
 //#if UNITY_5_3_OR_NEWER
 //                    UnityEngine.Profiling.Profiler.BeginSample("Encoder");
 //#endif
+
                     while (true) // Dequeue and process while the queue is not empty
                     {
                         if (exitThread) break; // early exit to save few resources
+
                         T[] b = null;
                         lock (pushDataQueue)
                         {
@@ -263,9 +294,11 @@ namespace Photon.Voice
                             break;
                         }
                     }
+
 //#if UNITY_5_3_OR_NEWER
 //                    UnityEngine.Profiling.Profiler.EndSample();
 //#endif
+
                 }
             }
             catch (Exception e)
@@ -280,17 +313,23 @@ namespace Photon.Voice
                     disposed = true;
                 }
                 this.bufferFactory.Dispose();
+
 #if NETFX_CORE
                 pushDataQueueReady.Dispose();
 #else
                 pushDataQueueReady.Close();
 #endif
+
                 voiceClient.transport.LogInfo(LogPrefix + ": Exiting data encode thread");
+
 //#if UNITY_5_3_OR_NEWER
 //                UnityEngine.Profiling.Profiler.EndThreadProfiling();
 //#endif
+
             }
         }
+
+
         /// <summary>Synchronously push data into this stream.</summary>
         // Accepts array of arbitrary size. Automatically splits or aggregates input to buffers of length <see cref="FrameSize"></see>.
         public void PushData(T[] buf)
@@ -320,6 +359,7 @@ namespace Photon.Voice
                 }
             }
         }
+
         /// <summary>
         /// Releases resources used by the <see cref="VoiceFramed"/> instance. 
         /// Buffers used for asynchronous push will be disposed in encoder thread's 'finally'.

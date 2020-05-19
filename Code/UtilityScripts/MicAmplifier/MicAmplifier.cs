@@ -58,25 +58,25 @@ namespace Photon.Voice.Unity.UtilityScripts
 
         private void OnEnable()
         {
-            if (floatProcessor != null)
+            if (this.floatProcessor != null)
             {
-                floatProcessor.Disabled = false;
+                this.floatProcessor.Disabled = false;
             }
-            if (shortProcessor != null)
+            if (this.shortProcessor != null)
             {
-                shortProcessor.Disabled = false;
+                this.shortProcessor.Disabled = false;
             }
         }
 
         private void OnDisable()
         {
-            if (floatProcessor != null)
+            if (this.floatProcessor != null)
             {
-                floatProcessor.Disabled = true;
+                this.floatProcessor.Disabled = true;
             }
-            if (shortProcessor != null)
+            if (this.shortProcessor != null)
             {
-                shortProcessor.Disabled = true;
+                this.shortProcessor.Disabled = true;
             }
         }
 

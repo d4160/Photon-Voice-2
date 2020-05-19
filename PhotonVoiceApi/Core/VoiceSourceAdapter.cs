@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 // <copyright file="VoiceSourceAdapter.cs" company="Exit Games GmbH">
 //   Photon Voice API Framework for Photon - Copyright (C) 2017 Exit Games GmbH
 // </copyright>
@@ -7,7 +7,9 @@
 // </summary>
 // <author>developer@photonengine.com</author>
 // ----------------------------------------------------------------------------
+
 using System;
+
 namespace Photon.Voice
 {
     /// <summary>
@@ -19,27 +21,32 @@ namespace Photon.Voice
     public abstract class BufferReaderPushAdapterBase<T> : IServiceable
     {
         protected IDataReader<T> reader;
+
         /// <summary>Do the actual data read/push.</summary>
         /// <param name="localVoice">LocalVoice instance to push data to.</param>
         public abstract void Service(LocalVoice localVoice);
+
         /// <summary>Create a new BufferReaderPushAdapterBase instance</summary>
         /// <param name="reader">DataReader to read from.</param>
         public BufferReaderPushAdapterBase(IDataReader<T> reader)
         {
             this.reader = reader;
         }
+
         /// <summary>Release resources associated with this instance.</summary>
         public void Dispose()
         {
             this.reader.Dispose();
         }
     }
+
     /// <summary>
     /// Simple <see cref="BufferReaderPushAdapterBase"></see> implementation using a single buffer, using synchronous <see cref="LocalVoice.PushData"></see>
     /// </summary>
     public class BufferReaderPushAdapter<T> : BufferReaderPushAdapterBase<T>
     {
         protected T[] buffer;
+
         /// <summary>Create a new BufferReaderPushAdapter instance</summary>
         /// <param name="localVoice">LocalVoice instance to push data to.</param>
         /// <param name="reader">DataReader to read from.</param>
@@ -48,6 +55,7 @@ namespace Photon.Voice
             // any buffer will work but only of localVoice.FrameSize avoids additional processing
             buffer = new T[((LocalVoiceFramed<T>)localVoice).FrameSize];
         }
+
         public override void Service(LocalVoice localVoice)
         {
             while (this.reader.Read(this.buffer))
@@ -56,6 +64,7 @@ namespace Photon.Voice
             }
         }
     }
+
     /// <summary>
     /// <see cref="BufferReaderPushAdapter"></see> implementation using asynchronous <see cref="LocalVoice.PushDataAsync"></see>.
     /// </summary>
@@ -68,6 +77,7 @@ namespace Photon.Voice
         /// <param name="localVoice">LocalVoice instance to push data to.</param>
         /// <param name="reader">DataReader to read from.</param>
         public BufferReaderPushAdapterAsyncPool(LocalVoice localVoice, IDataReader<T> reader) : base(reader) { }
+
         /// <summary>Do the actual data read/push.</summary>
         /// <param name="localVoice">LocalVoice instance to push data to. Must be a LocalVoiceFramed<T> of same T.</param>
         public override void Service(LocalVoice localVoice)
@@ -83,6 +93,8 @@ namespace Photon.Voice
             v.BufferFactory.Free(buf, buf.Length);
         }
     }
+
+
     /// <summary>
     /// <see cref="BufferReaderPushAdapter"></see> implementation using asynchronous <see cref="LocalVoice.PushDataAsync"></see> and data copy.
     /// </summary>
@@ -94,6 +106,7 @@ namespace Photon.Voice
     public class BufferReaderPushAdapterAsyncPoolCopy<T> : BufferReaderPushAdapterBase<T>
     {
         protected T[] buffer;
+
         /// <summary>Create a new BufferReaderPushAdapter instance</summary>
         /// <param name="localVoice">LocalVoice instance to push data to.</param>
         /// <param name="reader">DataReader to read from.</param>
@@ -101,6 +114,7 @@ namespace Photon.Voice
         {
             buffer = new T[((LocalVoiceFramedBase)localVoice).FrameSize];
         }
+
         /// <summary>Do the actual data read/push.</summary>
         /// <param name="localVoice">LocalVoice instance to push data to. Must be a LocalVoiceFramed<T> of same T.</param>
         public override void Service(LocalVoice localVoice)
@@ -114,6 +128,7 @@ namespace Photon.Voice
             }
         }
     }
+
     /// <summary>
     /// <see cref="BufferReaderPushAdapter"></see> implementation using asynchronous <see cref="LocalVoice.PushDataAsync"></see>, converting float samples to short.
     /// </summary>
@@ -124,6 +139,7 @@ namespace Photon.Voice
     public class BufferReaderPushAdapterAsyncPoolFloatToShort : BufferReaderPushAdapterBase<float>
     {
         float[] buffer;
+
         /// <summary>Create a new BufferReaderPushAdapter instance</summary>
         /// <param name="localVoice">LocalVoice instance to push data to.</param>
         /// <param name="reader">DataReader to read from.</param>
@@ -131,6 +147,7 @@ namespace Photon.Voice
         {
             buffer = new float[((LocalVoiceFramed<short>)localVoice).FrameSize];
         }
+
         /// <summary>Do the actual data read/push.</summary>
         /// <param name="localVoice">LocalVoice instance to push data to. Must be a LocalVoiceFramed<T> of same T.</param>
         public override void Service(LocalVoice localVoice)

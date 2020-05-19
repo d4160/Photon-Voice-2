@@ -253,7 +253,7 @@ namespace Photon.Voice.Unity
                 }
                 this.enabled = false;
             }
-            this.recorder = GetComponent<Recorder>();
+            this.recorder = this.GetComponent<Recorder>();
             if (this.recorder == null)
             {
                 if (this.Logger.IsErrorEnabled)
@@ -319,12 +319,10 @@ namespace Photon.Voice.Unity
             }
             if (this.recorder != null && this.recorder.SourceType != Recorder.InputSourceType.Microphone)
             {
-                if (this.Logger.IsErrorEnabled)
+                if (this.Logger.IsWarningEnabled)
                 {
-                    this.Logger.LogError("WebRtcAudioDsp should be used with Recorder.SourceType == Recorder.InputSourceType.Microphone only.");
+                    this.Logger.LogWarning("WebRtcAudioDsp is better suited to be used with Microphone as Recorder Input Source Type.");
                 }
-                this.enabled = false;
-                return;
             }
             this.localVoice = p.Voice;
             if (this.localVoice.Info.Channels != 1)

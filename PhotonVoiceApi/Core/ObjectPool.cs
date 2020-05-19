@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+
 namespace Photon.Voice
 {
     /// <summary>
@@ -18,6 +19,7 @@ namespace Photon.Voice
         abstract protected void destroyObject(TType obj);
         abstract protected bool infosMatch(TInfo i0, TInfo i1);
         internal string LogPrefix { get { return "[ObjectPool] [" + name + "]"; } }
+
         /// <summary>Create a new ObjectPool instance. Does not call Init().</summary>
         /// <param name="capacity">Capacity (size) of the object pool.</param>
         /// <param name="name">Name of the object pool.</param>
@@ -26,6 +28,7 @@ namespace Photon.Voice
             this.capacity = capacity;
             this.name = name;
         }
+
         /// <summary>Create a new ObjectPool instance with the given info structure. Calls Init().</summary>
         /// <param name="capacity">Capacity (size) of the object pool.</param>
         /// <param name="name">Name of the object pool.</param>
@@ -36,6 +39,7 @@ namespace Photon.Voice
             this.name = name;
             Init(info);
         }
+
         /// <summary>(Re-)Initializes this ObjectPool.</summary>
         /// If there are objects available in this Pool, they will be destroyed.
         /// Allocates (Capacity) new Objects.
@@ -53,11 +57,13 @@ namespace Photon.Voice
                 inited = true;
             }
         }
+
         /// <summary>The property (info) that objects in this Pool must match.</summary>
         public TInfo Info
         {
             get { return info; }
         }
+
         /// <summary>Acquire an existing object, or create a new one if none are available.</summary>
         /// <remarks>If it fails to get one from the pool, this will create from the info given in this pool's constructor.</remarks>
         public TType AcquireOrCreate()
@@ -75,6 +81,7 @@ namespace Photon.Voice
             }
             return createObject(this.info);
         }
+
         /// <summary>Acquire an existing object (if info matches), or create a new one from the passed info.</summary>
         /// <param name="info">Info structure to match, or create a new object with.</param>
         public TType AcquireOrCreate(TInfo info)
@@ -86,6 +93,7 @@ namespace Photon.Voice
             }
             return AcquireOrCreate();
         }
+
         /// <summary>Returns object to pool.</summary>
         /// <param name="obj">The object to return to the pool.</param>
         /// <param name="objInfo">The info structure about obj.</param>
@@ -104,12 +112,14 @@ namespace Photon.Voice
                     }
                 }
             }
+
             // destroy if can't reuse
             //UnityEngine.Debug.Log(LogPrefix + " Release(Info) destroy");
             destroyObject(obj);
             // TODO: log warning
             return false;
         }
+
         /// <summary>Returns object to pool, or destroys it if the pool is full.</summary>
         /// <param name="obj">The object to return to the pool.</param>
         virtual public bool Release(TType obj)
@@ -122,12 +132,14 @@ namespace Photon.Voice
                     return true;
                 }
             }
+
             // destroy if can't reuse
             //UnityEngine.Debug.Log(LogPrefix + " Release destroy " + pos);
             destroyObject(obj);
             // TODO: log warning
             return false;
         }
+
         /// <summary>Free resources assoicated with this ObjectPool</summary>
         public void Dispose()
         {
@@ -141,6 +153,7 @@ namespace Photon.Voice
             }
         }
     }
+
     /// <summary>
     /// Pool of Arrays with components of type T, with ObjectPool info being the array's size.
     /// </summary>
@@ -154,15 +167,18 @@ namespace Photon.Voice
             //UnityEngine.Debug.Log(LogPrefix + " Create " + pos);
             return new T[info];
         }
+
         protected override void destroyObject(T[] obj)
         {
             //UnityEngine.Debug.Log(LogPrefix + " Dispose " + pos + " " + obj.GetHashCode());
         }
+
         protected override bool infosMatch(int i0, int i1)
         {
             return i0 == i1;
         }
     }
+
     public class ImageBufferNativePool<T> : ObjectPool<T, ImageBufferInfo> where T : ImageBufferNative
     {
         public delegate T Factory(ImageBufferNativePool<T> pool, ImageBufferInfo info);
@@ -180,11 +196,13 @@ namespace Photon.Voice
             //UnityEngine.Debug.Log(LogPrefix + " Create " + pos);
             return factory(this, info);
         }
+
         protected override void destroyObject(T obj)
         {
             //UnityEngine.Debug.Log(LogPrefix + " Dispose " + pos + " " + obj.GetHashCode());
             obj.Dispose();
         }
+
         // only height and stride compared, other parameters do not affect native buffers and can be simple overwritten
         protected override bool infosMatch(ImageBufferInfo i0, ImageBufferInfo i1)
         {
